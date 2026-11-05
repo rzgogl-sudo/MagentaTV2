@@ -909,7 +909,7 @@
         "id": "exec_wm",
         "type": "exec",
         "z": "tab_magenta_analyzer_complete",
-        "command": "python3 /home/pi/project/zarpy/wmfiles.py",
+        "command": "python3 /home/pi/project/zarpy/pic/wmfiles.py",
         "addpay": "",
         "append": "",
         "useSpawn": "false",
@@ -1066,7 +1066,7 @@
         }
     },
     {
-        "id": "11a6a19c310c89a9",
+        "id": "5ac3d21f26c836d4",
         "type": "global-config",
         "env": [],
         "modules": {
