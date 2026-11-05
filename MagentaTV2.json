@@ -1,0 +1,2145 @@
+[
+    {
+        "id": "f26b92fccfb2c7cb",
+        "type": "tab",
+        "label": "MagentaTV Remote v1.2.3",
+        "disabled": false,
+        "info": "Version 1.2.3 Basis-Version + Handshake Fix + Logfile + Absolute Videolänge"
+    },
+    {
+        "id": "16b3e33f262fe7dc",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "ADB verbinden",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "connect",
+        "payload": "",
+        "payloadType": "str",
+        "x": 160,
+        "y": 60,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "826ccec38080e76d",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "ADB-Status alle 30 Sekunden",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "4",
+        "topic": "status-check",
+        "payload": "",
+        "payloadType": "str",
+        "x": 190,
+        "y": 120,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "2526f0fab4d45d47",
+        "type": "ui-template",
+        "z": "f26b92fccfb2c7cb",
+        "group": "747149ef8d0101b5",
+        "page": "",
+        "ui": "",
+        "name": "Remote, Sender-Monitor und Videoaufnahme v1.2.3",
+        "order": 3,
+        "width": "12",
+        "height": "0",
+        "head": "",
+        "format": "<template><div class=\"app\"><main class=\"remote\"><header><div><b>MAGENTA TV</b><small>ONE 2 · ADB REMOTE</small><span>Version 1.2.3</span></div><button class=\"power\" @click=\"key('KEYCODE_POWER')\">⏻</button></header>\n<section class=\"cfg\"><button type=\"button\" class=\"cfgtitle\" @click=\"toggleConfig\" :aria-expanded=\"String(!configCollapsed)\" :data-hint=\"configCollapsed?'IP-Einstellungen aufklappen':'IP-Einstellungen zuklappen'\"><b>BOX-EINSTELLUNGEN</b><span class=\"collapseicon\" :class=\"{collapsed:configCollapsed}\">⌄</span></button><div v-show=\"!configCollapsed\" class=\"cfgbody\"><label>Box A – IP-Adresse</label><div class=\"row\"><input v-model.trim=\"targetIpA\" @keyup.enter=\"saveIpA\"><button @click=\"saveIpA\">Übernehmen</button></div><label v-if=\"scanMode==='sequential'\" class=\"boxenable\"><input type=\"checkbox\" v-model=\"boxAEnabled\" @change=\"setBoxEnabled('A')\"><span>Box A aktiv</span></label><label class=\"boxenable\" style=\"margin-top:10px\">Box B – IP-Adresse</label><div class=\"row\"><input v-model.trim=\"targetIpB\" @keyup.enter=\"saveIpB\"><button @click=\"saveIpB\">Übernehmen</button></div><label v-if=\"scanMode==='sequential'\" class=\"boxenable\"><input type=\"checkbox\" v-model=\"boxBEnabled\" @change=\"setBoxEnabled('B')\"><span>Box B aktiv</span></label><small v-else class=\"modehint2\">Im Listenmodus sind beide Boxen immer aktiv.</small><div class=\"checkstatusrow\"><button type=\"button\" class=\"checkstatusbtn\" @click=\"checkStatus\">Verbindung prüfen</button><small>{{configMessage}}</small></div></div></section><section class=\"pinset\"><button type=\"button\" class=\"cfgtitle\" @click=\"pinCollapsed=!pinCollapsed\"><b>PIN FÜR SPERRBILDSCHIRME</b><span class=\"collapseicon\" :class=\"{collapsed:pinCollapsed}\">⌄</span></button><div v-show=\"!pinCollapsed\" class=\"pinbody\"><small>Wird automatisch eingegeben, wenn beim Sender-Scan ein PIN-Bildschirm (z. B. Jugendschutz) erkannt wird. Nach zwei erfolglosen Versuchen pausiert die automatische Eingabe zum Schutz vor einer Sperre.</small><div class=\"row\"><input type=\"password\" v-model.trim=\"pinValue\" placeholder=\"4- bis 8-stellige PIN\" maxlength=\"8\"><button @click=\"savePin\">Speichern</button></div><button type=\"button\" class=\"pinresetbtn\" @click=\"resetPinLock\">PIN-Sperre zurücksetzen</button></div></section>\n<section class=\"boxstatus\"><div class=\"boxstatusrow\"><i class=\"ledhint\" :class=\"{on:onlineA}\" :data-hint=\"statusA\"></i><span class=\"boxlabel\">BOX A</span><b>{{requestedChannel||'---'}}</b></div><div class=\"boxstatusrow\"><i class=\"ledhint\" :class=\"{on:onlineB}\" :data-hint=\"statusB\"></i><span class=\"boxlabel\">BOX B</span><b>{{requestedChannelB||'---'}}</b><small v-if=\"scanMode==='list'&&boxOffset\" class=\"offsettag\">+{{boxOffset}}</small></div></section><section class=\"programme\"><div class=\"request\"><span>EINGABE <b>{{digits||'---'}}</b></span><span>ANGEFORDERT <b>{{requestedChannel||'---'}}</b></span><span :class=\"actualClass\">ERKANNT <b>{{actualChannel||'---'}}</b></span></div><div v-if=\"loading\" class=\"loading\"><i></i><b>Sendungsdaten werden geladen</b></div><template v-else><div class=\"station\"><em>{{program.channel===null?'--':program.channel}}</em><b>{{program.station||'Keine Senderdaten'}}</b></div><h3>{{program.title||'Keine Sendungsdaten geladen'}}</h3><div class=\"meta\"><span v-if=\"program.remaining_minutes!==null\">Noch {{program.remaining_minutes}} Min.</span><span v-if=\"program.duration_minutes!==null\">{{program.duration_minutes}} Min.</span><span v-if=\"program.genre\">{{program.genre}}</span><span v-if=\"program.quality\">{{program.quality}}</span></div><p v-if=\"error\">{{error}}</p></template></section>\n<section class=\"automation\">\n<button type=\"button\" class=\"cfgtitle\" @click=\"toggleAutomationSetup\" :aria-expanded=\"String(!automationSetupCollapsed)\" :data-hint=\"automationSetupCollapsed?'Automatik-Einstellungen aufklappen':'Automatik-Einstellungen zuklappen'\">\n<b>AUTOMATISCHE UMSCHALTUNG</b>\n<span class=\"collapseicon\" :class=\"{collapsed:automationSetupCollapsed}\">⌄</span>\n</button>\n<div v-show=\"!automationSetupCollapsed\" class=\"automationsetup\">\n<div class=\"modes\"><button :class=\"{sel:scanMode==='sequential'}\" @click=\"setMode('sequential')\">Alle Sender</button><button :class=\"{sel:scanMode==='list'}\" @click=\"setMode('list')\">Senderliste</button></div><div v-if=\"scanMode==='list'\" class=\"offsetrow\"><label>Box-B-Offset in der Liste (0 = aus, max. {{boxOffsetMax}})</label><div class=\"stepper\"><button @click=\"changeOffset(-1)\">−</button><input type=\"number\" min=\"0\" :max=\"boxOffsetMax\" step=\"1\" v-model.number=\"boxOffset\" @change=\"applyOffset\"><button @click=\"changeOffset(1)\">+</button></div><small class=\"rangehint\">Box A startet bei Position 1 der Liste, Box B bei Position 1+Offset (mit Umlauf). Maximal die Hälfte der Listenlänge ({{boxOffsetMax}} von {{parsedList.length}} Sendern).</small></div><label>Videolänge in Sek. (mind. 8s)</label><div class=\"stepper\"><button @click=\"changeInterval(-1)\">−</button><input type=\"number\" min=\"8\" max=\"3600\" step=\"1\" v-model.number=\"scanInterval\" @change=\"applyInterval\"><button @click=\"changeInterval(1)\">+</button></div><label class=\"boxenable\" style=\"margin-top:10px; margin-bottom:10px;\"><input type=\"checkbox\" v-model=\"autostartEnabled\" @change=\"saveAutostart\"><span>Autostart mit Liste beim Booten</span></label><div v-if=\"scanMode==='list'\" class=\"editor\"><textarea v-model=\"channelListText\" rows=\"7\" placeholder=\"1&#10;2&#10;5&#10;&#10;12, 15&#10;101; 112&#10;&#10;1-10&#10;20-30&#10;40-49\"></textarea><input ref=\"listFile\" class=\"fileinput\" type=\"file\" accept=\".txt,.csv,.json,text/plain,text/csv,application/json\" @change=\"loadExternalList\"><div class=\"importrow\"><button @click=\"openListFile\">Externe Liste laden</button><span>TXT, CSV oder JSON</span></div><div><button @click=\"saveList\">Liste übernehmen</button><button @click=\"clearList\">Leeren</button></div><small>{{parsedList.length}} Positionen · {{listMessage}}</small><small class=\"rangehint\">Bereiche möglich, z. B. 1-10, 20-30, 40-49</small></div>\n</div><div v-if=\"scanMode==='sequential'\" class=\"scanbuttons allscanbuttons\"><button type=\"button\" class=\"startbtn\" @click.prevent=\"startNumberAutomation\">Start Nummernscan</button><button type=\"button\" class=\"chplusbtn\" @click.prevent=\"startChannelUpAutomation\">Start CH+ Scan</button><button type=\"button\" class=\"stopbtn\" @click.prevent=\"stopAllAutomation\">Stop alle</button></div><div v-else class=\"scanbuttons\"><button type=\"button\" class=\"startbtn\" @click.prevent=\"startListAutomation\">Start Senderliste</button><button type=\"button\" class=\"stopbtn\" @click.prevent=\"stopAllAutomation\">Stop alle</button><button type=\"button\" class=\"resetbtn\" @click.prevent=\"resetAutomation\">Reset</button></div><span>{{scanRunning?'AKTIV':'AUS'}} · {{automationLabel}} · {{scanInterval}}s Video · {{automationType==='channel-up'?'Nächste Aktion: CH+':'Nächster A: '+scanNext+(boxOffset&&scanMode==='list'?' · Nächster B: '+scanNextB:'')}}</span><div class=\"recordline\"><label><input type=\"checkbox\" v-model=\"recordingEnabled\" @change=\"setRecording\"><span>Dateiaufzeichnung aktivieren</span></label></div><div class=\"exportline\"><b>EXCEL-EXPORT</b><div><button @click=\"exportExcel('directory')\">Gesamtliste</button><button @click=\"exportExcel('control')\">Steuerliste</button><button @click=\"exportExcel('both')\">Beide Listen</button></div><small>{{exportMessage}}</small></div></section>\n<div class=\"specialkeys\"><button type=\"button\" title=\"Zurueck oder Dialog verlassen\" @click=\"key('KEYCODE_BACK')\">BACK / EXIT</button><button type=\"button\" title=\"Android-Startseite oeffnen\" @click=\"key('KEYCODE_HOME')\">HOME</button><button type=\"button\" title=\"Informationen zur Sendung\" @click=\"key('KEYCODE_INFO')\">INFO</button><button type=\"button\" title=\"Zur TV-Wiedergabe wechseln\" @click=\"key('KEYCODE_TV')\">TV</button></div><div class=\"nav\"><button class=\"up\" @click=\"key('KEYCODE_DPAD_UP')\">▲</button><button class=\"left\" @click=\"key('KEYCODE_DPAD_LEFT')\">◀</button><button class=\"ok\" @click=\"key('KEYCODE_DPAD_CENTER')\">OK</button><button class=\"right\" @click=\"key('KEYCODE_DPAD_RIGHT')\">▶</button><button class=\"down\" @click=\"key('KEYCODE_DPAD_DOWN')\">▼</button></div><div class=\"rock\"><button @click=\"key('KEYCODE_VOLUME_UP')\">VOL +</button><button @click=\"key('KEYCODE_VOLUME_MUTE')\">MUTE</button><button @click=\"key('KEYCODE_CHANNEL_UP')\">CH +</button><button @click=\"key('KEYCODE_VOLUME_DOWN')\">VOL -</button><button @click=\"key('KEYCODE_MEDIA_PLAY_PAUSE')\">PLAY</button><button @click=\"key('KEYCODE_CHANNEL_DOWN')\">CH -</button></div>\n<div class=\"display\">{{digits||'Sender 1- bis 3-stellig'}}</div><div class=\"nums\"><button v-for=\"n in [1,2,3,4,5,6,7,8,9]\" :key=\"n\" @click=\"digit(n)\">{{n}}</button><button @click=\"digits=''\">C</button><button @click=\"digit(0)\">0</button><button @click=\"go\">OK</button></div><section class=\"storageset\"><b>SYSTEM-SPEICHERORT</b><small>Die Auswahl gilt sofort. Alte wartende Aufnahmeaufträge werden verworfen.</small><select v-model=\"system\" @change=\"setSystem\"><option value=\"production\">Produktion</option><option value=\"development\">Entwicklung</option></select><p><span>Daten:</span> {{storageBase}}/services<br><span>Aufnahmen:</span> {{storageBase}}/magentatv<br><span>Python:</span> {{captureScript}}</p><small>{{systemMessage}}</small><div style=\"margin-top:14px; padding-top:12px; border-top:1px solid #333;\"><b>AUTOMATISCHE BEREINIGUNG</b><small>Löscht alte Videoaufnahmen nachts automatisch, um Platz zu sparen.</small><label style=\"display:block; margin-top:8px; color:#ccc; font-size:11px; margin-bottom:4px;\">Aufbewahrungsdauer (Wochen)</label><div class=\"stepper\"><button @click=\"changeRetention(-1)\">−</button><input type=\"number\" min=\"1\" max=\"52\" step=\"1\" v-model.number=\"retentionWeeks\" @change=\"applyRetention\"><button @click=\"changeRetention(1)\">+</button></div><small style=\"margin-top:6px;\">{{retentionMessage}}</small></div></section><section class=\"videocfg\"><button type=\"button\" class=\"cfgtitle\" @click=\"videoConfigCollapsed=!videoConfigCollapsed\"><b>VIDEO-AUFZEICHNUNG</b><span class=\"collapseicon\" :class=\"{collapsed:videoConfigCollapsed}\">⌄</span></button><div v-show=\"!videoConfigCollapsed\" class=\"videocfgbody\"><small>Nur Boxen, die oben in „BOX-EINSTELLUNGEN“ aktiv sind, können aufgenommen werden. Das Deaktivieren einer Box deaktiviert sofort auch ihre Aufnahme-Checkbox.</small><label>Wartezeit nach Umschalten (0–5 Sekunden)</label><input type=\"number\" min=\"0\" max=\"5\" v-model.number=\"videoCaptureSettle\" @change=\"saveVideo\"><div class=\"videobox\"><label><input type=\"checkbox\" v-model=\"videoCaptureEnabledA\" @change=\"saveVideo\" :disabled=\"!boxAEnabled\"><span>Videoaufnahme Box A aktiv</span></label><input v-model.trim=\"videoDeviceA\" @change=\"saveVideo\" placeholder=\"Video-Gerät Box A\"><input v-model.trim=\"audioDeviceA\" @change=\"saveVideo\" placeholder=\"Audio-Gerät Box A\"></div><div class=\"videobox\"><label><input type=\"checkbox\" v-model=\"videoCaptureEnabledB\" @change=\"saveVideo\" :disabled=\"!boxBEnabled\"><span>Videoaufnahme Box B aktiv</span></label><input v-model.trim=\"videoDeviceB\" @change=\"saveVideo\" placeholder=\"Video-Gerät Box B\"><input v-model.trim=\"audioDeviceB\" @change=\"saveVideo\" placeholder=\"Audio-Gerät Box B\"></div><small>{{videoCaptureMessage}}</small></div></section></main>\n<aside class=\"monitor\"><header><div><b>SENDER-MONITOR</b><small>Fortschritt</small></div><span :class=\"{active:scanRunning}\">{{scanRunning?'LÄUFT':'STOPP'}}</span></header><section class=\"current\"><small>AKTUELL AKTIV</small><div><em>{{actualChannel||'--'}}</em><b>{{activeStation||'Noch nicht erkannt'}}</b></div></section><div class=\"progress\"><span>{{knownCount}} von {{rows.length}} erkannt</span><span>{{percent}} %</span></div><div class=\"bar\"><i :style=\"{width:percent+'%'}\"></i></div><section class=\"directorytools\"><button type=\"button\" class=\"cfgtitle\" @click=\"toggleDirectoryTools\" :aria-expanded=\"String(!directoryToolsCollapsed)\" :data-hint=\"directoryToolsCollapsed?'Senderlisten-Einstellungen aufklappen':'Senderlisten-Einstellungen zuklappen'\"><b>GESAMTSENDERLISTE JSON</b><span class=\"collapseicon\" :class=\"{collapsed:directoryToolsCollapsed}\">⌄</span></button><div v-show=\"!directoryToolsCollapsed\" class=\"directorytoolsbody\"><input ref=\"directoryFile\" class=\"fileinput\" type=\"file\" accept=\".json,application/json\" @change=\"loadDirectoryJson\"><div><button type=\"button\" @click=\"downloadDirectoryJson\">JSON speichern</button><button type=\"button\" @click=\"openDirectoryFile\">JSON laden</button><button type=\"button\" class=\"dangerbtn\" @click=\"clearDirectory\">Gesamtliste löschen</button></div><small>{{directoryMessage}}</small><div class=\"modehint\">{{scanMode==='list'?'Klick auf einen Sender fügt ihn der Steuerliste hinzu.':'Klick auf einen Sender schaltet direkt auf diesen Programmplatz.'}}</div><div class=\"adoptrow\"><button type=\"button\" @click=\"adoptAllKnownToList\">Erkannte Sender übernehmen</button></div></div></section><section class=\"controllist\"><header><div><b>UMSCHALTLISTE</b><small>{{controlRows.length}} Einträge · Verschieben speichert automatisch</small></div><span>{{controlRows.length}}</span></header><div class=\"controlhead\"><span></span><span>Nr.</span><span>Pos.</span><span>Sendername</span><span></span></div><div ref=\"controlRows\" class=\"controlrows\" :style=\"{maxHeight:controlListHeight+'px',height:controlListHeight+'px'}\"><div v-for=\"(r,i) in controlRows\" :key=\"'control-'+i+'-'+r.pos\" class=\"controlrow\" :ref=\"r.current?'activeControlRow':(r.next?'nextControlRow':null)\" :class=\"{next:r.next,current:r.current,nextb:r.nextB,focus:r.current||r.next,dragging:dragIndex===i,dragover:dragOverIndex===i}\" :draggable=\"!scanRunning\" @dragstart=\"controlDragStart(i,$event)\" @dragover.prevent=\"controlDragOver(i,$event)\" @drop.prevent=\"controlDrop(i,$event)\" @dragend=\"controlDragEnd\"><span class=\"draghandle\" data-hint=\"Mit der Maus verschieben\">⋮⋮</span><span class=\"ordernr\">{{i+1}}</span><b>{{r.pos}}</b><span class=\"controlname\">{{r.name}}<small v-if=\"r.nextB\" class=\"nextbtag\">B</small></span><button type=\"button\" :disabled=\"scanRunning\" @click.stop=\"removeControlEntry(i)\" data-hint=\"Aus Umschaltliste entfernen\">×</button></div><div v-if=\"!controlRows.length\" class=\"controlempty\">Noch keine Sender in der Umschaltliste</div></div><div class=\"listresize\" @mousedown.prevent=\"startResizeControlList\" data-hint=\"Listenhoehe mit der Maus aendern\"><span></span></div></section><button type=\"button\" class=\"fulllisttitle\" @click=\"toggleDirectory\" :aria-expanded=\"String(!directoryCollapsed)\" :data-hint=\"directoryCollapsed?'Gesamtsenderliste aufklappen':'Gesamtsenderliste zuklappen'\"><div><b>GESAMTSENDERLISTE</b><small>{{rows.length}} erkannte Sender</small></div><span class=\"collapseicon\" :class=\"{collapsed:directoryCollapsed}\">⌄</span></button><div v-show=\"!directoryCollapsed\" class=\"directorybody\"><div class=\"head\"><span>Pos.</span><span>Sendername</span><span>Status</span></div><div ref=\"directoryRows\" class=\"list\"><button v-for=\"(r,i) in rows\" :key=\"r.pos+'-'+i\" :ref=\"r.current?'activeDirectoryRow':(r.next?'nextDirectoryRow':null)\" :disabled=\"scanRunning\" @click=\"handleMonitorClick(r.pos)\" :class=\"{current:r.current,next:r.next,known:r.known}\" :data-hint=\"scanMode==='list'?'Zur Steuerliste hinzufügen':'Auf diesen Sender umschalten'\"><span>{{r.pos}}</span><span>{{r.name}}</span><small>{{r.current?'AKTIV':(r.next?'NÄCHSTER':(r.known?'ERKANNT':'OFFEN'))}}</small></button></div></div></aside></div></template>\n<script>export default{data(){return{digits:'',dragIndex:null,dragOverIndex:null,directoryCollapsed:false,configCollapsed:false,automationSetupCollapsed:false,directoryToolsCollapsed:false,scrolledDown:false,controlListHeight:210,resizingControlList:false,resizeStartY:0,resizeStartHeight:210,targetIpA:'192.168.2.41',targetIpB:'192.168.2.42',boxAEnabled:true,boxBEnabled:false,configMessage:'',pinCollapsed:false,pinValue:'',onlineA:false,onlineB:false,statusA:'wird geprüft',statusB:'wird geprüft',loading:false,error:'',requestedChannel:'',requestedChannelB:'',actualChannel:'',scanRunning:false,automationType:'off',scanInterval:15,autostartEnabled:false,scanMode:'sequential',scanNext:'001',scanNextB:null,boxOffset:0,boxOffsetMax:0,channelListText:'',channelList:[],listMessage:'Senderliste wird geladen',recordingEnabled:false,system:'production',systemMessage:'',storageBase:'/mnt/rec',captureScript:'',videoConfigCollapsed:false,videoCaptureEnabledA:true,videoCaptureEnabledB:true,videoDeviceA:'/dev/video0',videoDeviceB:'/dev/video2',audioDeviceA:'plughw:CARD=U25773,DEV=0',audioDeviceB:'plughw:3,0',videoCaptureSettle:2,videoCaptureMessage:'',exportMessage:'',directoryMessage:'Automatische Speicherung aktiv',directory:{},activeStation:'',program:{channel:null,station:'',title:'',remaining_minutes:null,duration_minutes:null,genre:'',quality:''},retentionWeeks:4,retentionMessage:''}},mounted(){try{this.directoryCollapsed=localStorage.getItem('magentatvDirectoryCollapsed')==='true';this.configCollapsed=localStorage.getItem('magentatvConfigCollapsed')==='true';this.automationSetupCollapsed=localStorage.getItem('magentatvAutomationSetupCollapsed')==='true';this.directoryToolsCollapsed=localStorage.getItem('magentatvDirectoryToolsCollapsed')==='true';const h=Number(localStorage.getItem('magentatvControlListHeight'));if(h>=120&&h<=900)this.controlListHeight=h}catch(e){};window.addEventListener('mousemove',this.resizeControlList);window.addEventListener('mouseup',this.stopResizeControlList);window.addEventListener('scroll',this.updateScrollFocus,{passive:true});this.updateScrollFocus();this.mountScrollFab();this.$nextTick(()=>{this.keepControlFocusVisible();this.keepDirectoryFocusVisible();setTimeout(()=>this.send({topic:'frontend-ready'}),250)})},beforeUnmount(){window.removeEventListener('mousemove',this.resizeControlList);window.removeEventListener('mouseup',this.stopResizeControlList);window.removeEventListener('scroll',this.updateScrollFocus);if(this._scrollFabEl&&this._scrollFabEl.parentNode)this._scrollFabEl.parentNode.removeChild(this._scrollFabEl);},computed:{parsedList(){const normalized=this.channelListText.replace(/(\\d)\\s*-\\s*(\\d)/g,'$1-$2');const tokens=normalized.split(/[\\s,;]+/).map(v=>v.trim()).filter(Boolean);const result=[];for(const tok of tokens){const rangeMatch=tok.match(/^(\\d{1,3})-(\\d{1,3})$/);if(rangeMatch){let from=Number(rangeMatch[1]),to=Number(rangeMatch[2]);if(from<=999&&to<=999){if(from>to){const t=from;from=to;to=t}for(let n=from;n<=to;n++)result.push(String(n));continue;}}if(/^\\d{1,3}$/.test(tok)&&Number(tok)<=999)result.push(tok);}return result;},positions(){return Object.keys(this.directory).sort((a,b)=>+a-+b)},rows(){return this.positions.map(p=>{const k=String(Number(p)),name=this.directory[k]||'Noch nicht erkannt';return{pos:String(p),name,known:!!this.directory[k],current:k===String(Number(this.actualChannel)),next:k===String(Number(this.scanNext))}})},controlRows(){return this.parsedList.map(p=>{const k=String(Number(p));return{pos:String(p),name:this.directory[k]||'Noch nicht erkannt',current:k===String(Number(this.actualChannel)),next:k===String(Number(this.scanNext)),nextB:!!(this.boxOffset&&this.scanMode==='list'&&this.scanNextB!==null&&k===String(Number(this.scanNextB)))}})},knownCount(){return this.rows.filter(r=>r.known).length},percent(){return this.rows.length?Math.round(this.knownCount*100/this.rows.length):0},automationLabel(){if(this.automationType==='channel-up')return'CH+ Scan';if(this.automationType==='list')return'Senderlistenscan';if(this.automationType==='number')return'Nummernscan';return'keine Automatik'},actualClass(){if(!this.actualChannel)return'pending';if(['CH+','CH-','BACK / EXIT','HOME','INFO','TV'].includes(this.requestedChannel))return'channelstep';return Number(this.requestedChannel)===Number(this.actualChannel)?'confirmed':'substitute'}},watch:{actualChannel(){this.$nextTick(()=>{this.keepControlFocusVisible();this.keepDirectoryFocusVisible()})},scanNext(){this.$nextTick(()=>{this.keepControlFocusVisible();this.keepDirectoryFocusVisible()})},directoryCollapsed(v){if(v&&this.controlListHeight<520)this.controlListHeight=520;this.$nextTick(()=>{this.keepControlFocusVisible();this.keepDirectoryFocusVisible()})},msg:{deep:true,handler(m){const p=m&&m.payload;if(!p||typeof p!=='object')return;if(p.targetIpA)this.targetIpA=p.targetIpA;if(p.targetIpB)this.targetIpB=p.targetIpB;if(typeof p.boxAEnabled==='boolean')this.boxAEnabled=p.boxAEnabled;if(typeof p.boxBEnabled==='boolean')this.boxBEnabled=p.boxBEnabled;if(p.configMessage)this.configMessage=p.configMessage;if(typeof p.pinConfigured==='boolean'&&p.pinConfigured&&!this.pinValue)this.pinValue='********';if(typeof p.onlineA==='boolean')this.onlineA=p.onlineA;if(typeof p.onlineB==='boolean')this.onlineB=p.onlineB;if(typeof p.online==='boolean')this.onlineA=p.online;if(p.status){const mA=p.status.match(/Box A (verbunden|nicht verbunden)/);const mB=p.status.match(/Box B (verbunden|nicht verbunden)/);if(mA)this.statusA=mA[1];if(mB)this.statusB=mB[1];if(!mA&&!mB){this.statusA=p.status;this.statusB=p.status;}}if(typeof p.loading==='boolean')this.loading=p.loading;if(p.requestedChannel!==undefined)this.requestedChannel=String(p.requestedChannel);if(p.requestedChannelB!==undefined)this.requestedChannelB=String(p.requestedChannelB);if(p.actualChannel!==undefined){this.actualChannel=String(p.actualChannel);if(String(p.actualChannel)===''){this.activeStation='';this.program={channel:null,station:'',title:'',remaining_minutes:null,duration_minutes:null,genre:'',quality:''};this.error=''}}if(p.program){this.program=p.program;this.actualChannel=String(p.program.channel??'');this.activeStation=p.program.station||'';this.loading=false;this.error=''}if(p.programError){this.error=p.programError;this.loading=false}if(typeof p.scanRunning==='boolean')this.scanRunning=p.scanRunning;if(p.automationType)this.automationType=p.automationType;if(p.scanInterval)this.scanInterval=+p.scanInterval;if(typeof p.autostartEnabled==='boolean')this.autostartEnabled=p.autostartEnabled;if(p.scanMode)this.scanMode=p.scanMode;if(p.scanNext!==undefined)this.scanNext=String(p.scanNext);if(p.scanNextB!==undefined)this.scanNextB=p.scanNextB===null?null:String(p.scanNextB);if(typeof p.boxOffset==='number')this.boxOffset=p.boxOffset;if(typeof p.boxOffsetMax==='number')this.boxOffsetMax=p.boxOffsetMax;if(Array.isArray(p.channelList))this.channelList=p.channelList.map(String);if(typeof p.channelListText==='string')this.channelListText=p.channelListText;if(p.listMessage)this.listMessage=p.listMessage;if(p.directory)this.directory=p.directory;if(typeof p.recordingEnabled==='boolean')this.recordingEnabled=p.recordingEnabled;if(p.system)this.system=p.system;if(p.systemMessage)this.systemMessage=p.systemMessage;if(p.storageBase)this.storageBase=p.storageBase;if(p.captureScript)this.captureScript=p.captureScript;if(p.videoCapture){const v=p.videoCapture;this.videoCaptureEnabledA=v.a&&v.a.enabled!==false;this.videoCaptureEnabledB=v.b&&v.b.enabled!==false;this.videoDeviceA=(v.a&&v.a.video)||this.videoDeviceA;this.videoDeviceB=(v.b&&v.b.video)||this.videoDeviceB;this.audioDeviceA=(v.a&&v.a.audio)||this.audioDeviceA;this.audioDeviceB=(v.b&&v.b.audio)||this.audioDeviceB;this.videoCaptureSettle=Number(v.settle??this.videoCaptureSettle)}if(typeof p.boxAEnabled==='boolean'&&!p.boxAEnabled)this.videoCaptureEnabledA=false;if(typeof p.boxBEnabled==='boolean'&&!p.boxBEnabled)this.videoCaptureEnabledB=false;if(p.videoCaptureMessage)this.videoCaptureMessage=p.videoCaptureMessage;if(p.exportMessage)this.exportMessage=p.exportMessage;if(p.directoryMessage)this.directoryMessage=p.directoryMessage;if(typeof p.retentionWeeks==='number')this.retentionWeeks=p.retentionWeeks;if(p.retentionMessage)this.retentionMessage=p.retentionMessage;}}},methods:{key(k){this.send({topic:'key',payload:k})},digit(n){if(this.digits.length<3)this.digits+=String(n)},go(){if(!this.digits)return;const c=this.digits;this.requestedChannel=c;this.actualChannel='';this.activeStation='';this.loading=true;this.program={channel:null,station:'',title:'',remaining_minutes:null,duration_minutes:null,genre:'',quality:''};this.send({topic:'channel',payload:c});this.digits=''},handleMonitorClick(c){if(this.scanRunning)return;const channel=String(c);if(this.scanMode==='list'){const current=this.parsedList.map(String);if(current.includes(channel)){this.listMessage='Sender '+channel+' ist bereits in der Steuerliste';return}const separator=this.channelListText&& !this.channelListText.endsWith('\\n')?'\\n':'';this.channelListText=this.channelListText+separator+channel;this.channelList=this.parsedList.slice();this.listMessage='Sender '+channel+' zur Steuerliste hinzugefügt, bitte Liste übernehmen';return}this.requestedChannel=channel;this.actualChannel='';this.activeStation='';this.loading=true;this.send({topic:'channel',payload:channel})},saveIpA(){this.send({topic:'config-ip-a',payload:this.targetIpA})},saveIpB(){this.send({topic:'config-ip-b',payload:this.targetIpB})},setBoxEnabled(which){if(which==='A')this.send({topic:'box-a-enabled',payload:this.boxAEnabled});else this.send({topic:'box-b-enabled',payload:this.boxBEnabled})},checkStatus(){this.send({topic:'status-check'})},savePin(){if(!/^\\d{4,8}$/.test(this.pinValue)){this.configMessage='Ungültige PIN: bitte 4 bis 8 Ziffern';return}this.send({topic:'pin-save',payload:this.pinValue})},resetPinLock(){this.send({topic:'pin-reset-lock'})},changeInterval(d){this.scanInterval=Math.max(8,Math.min(3600,Number(this.scanInterval||8)+d));this.applyInterval()},applyInterval(){this.scanInterval=Math.max(8,Math.min(3600,Math.round(Number(this.scanInterval)||10)));this.send({topic:'scan-interval',payload:this.scanInterval})},saveAutostart(){this.send({topic:'autostart-config',payload:this.autostartEnabled})},changeOffset(d){this.boxOffset=Math.max(0,Math.min(this.boxOffsetMax,Number(this.boxOffset||0)+d));this.applyOffset()},applyOffset(){this.boxOffset=Math.max(0,Math.min(this.boxOffsetMax,Math.round(Number(this.boxOffset)||0)));this.send({topic:'list-offset',payload:this.boxOffset})},setMode(v){this.scanMode=v;this.send({topic:'scan-mode',payload:v})},openListFile(){if(this.$refs.listFile)this.$refs.listFile.click()},loadExternalList(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{let text=String(reader.result||'');if(file.name.toLowerCase().endsWith('.json')){try{const data=JSON.parse(text);if(Array.isArray(data))text=data.join('\\n');else if(data&&Array.isArray(data.channels))text=typeof data.raw_text==='string'?data.raw_text:(typeof data.rawText==='string'?data.rawText:data.channels.join('\\n'));else throw new Error('Format');}catch(e){this.listMessage='JSON konnte nicht gelesen werden';event.target.value='';return;}}this.channelListText=text;const channels=this.parsedList.slice();this.channelList=channels;this.listMessage=channels.length+' Sender geladen und automatisch gespeichert';this.send({topic:'scan-list',payload:{rawText:this.channelListText,channels}});event.target.value='';};reader.onerror=()=>{this.listMessage='Datei konnte nicht gelesen werden'};reader.readAsText(file,'UTF-8')},startResizeControlList(event){if(this.scanRunning)return;this.resizingControlList=true;this.resizeStartY=event.clientY;this.resizeStartHeight=this.controlListHeight;document.body.classList.add('resizing-control-list')},resizeControlList(event){if(!this.resizingControlList)return;const next=Math.max(120,Math.min(900,this.resizeStartHeight+(event.clientY-this.resizeStartY)));this.controlListHeight=Math.round(next)},stopResizeControlList(){if(!this.resizingControlList)return;this.resizingControlList=false;document.body.classList.remove('resizing-control-list');try{localStorage.setItem('magentatvControlListHeight',String(this.controlListHeight))}catch(e){};this.$nextTick(()=>this.keepControlFocusVisible())},keepControlFocusVisible(){const box=this.$refs.controlRows;if(!box)return;let row=this.$refs.activeControlRow||this.$refs.nextControlRow;if(Array.isArray(row))row=row[0];if(!row)return;const top=row.offsetTop,bottom=top+row.offsetHeight;if(top<box.scrollTop)box.scrollTo({top:Math.max(0,top-8),behavior:'smooth'});else if(bottom>box.scrollTop+box.clientHeight)box.scrollTo({top:Math.max(0,bottom-box.clientHeight+8),behavior:'smooth'})},keepDirectoryFocusVisible(){const box=this.$refs.directoryRows;if(!box||this.directoryCollapsed)return;let row=this.$refs.activeDirectoryRow||this.$refs.nextDirectoryRow;if(Array.isArray(row))row=row[0];if(!row)return;const top=row.offsetTop,bottom=top+row.offsetHeight;if(top<box.scrollTop)box.scrollTo({top:Math.max(0,top-8),behavior:'smooth'});else if(bottom>box.scrollTop+box.clientHeight)box.scrollTo({top:Math.max(0,bottom-box.clientHeight+8),behavior:'smooth'})},controlDragStart(index,event){if(this.scanRunning){event.preventDefault();return}this.dragIndex=index;this.dragOverIndex=index;if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',String(index))}},controlDragOver(index,event){if(this.scanRunning||this.dragIndex===null)return;this.dragOverIndex=index;if(event.dataTransfer)event.dataTransfer.dropEffect='move'},controlDrop(index,event){if(this.scanRunning||this.dragIndex===null)return;const entries=this.parsedList.slice();const from=this.dragIndex;const to=index;if(from<0||from>=entries.length||to<0||to>=entries.length){this.controlDragEnd();return}const moved=entries.splice(from,1)[0];entries.splice(to,0,moved);this.channelListText=entries.join('\\n');this.channelList=entries.slice();this.dragIndex=null;this.dragOverIndex=null;this.listMessage='Neue Reihenfolge automatisch gespeichert';this.send({topic:'scan-list',payload:{rawText:this.channelListText,channels:entries}});this.$nextTick(()=>this.keepControlFocusVisible())},controlDragEnd(){this.dragIndex=null;this.dragOverIndex=null},removeControlEntry(index){if(this.scanRunning)return;const entries=this.parsedList.slice();if(index<0||index>=entries.length)return;const removed=entries.splice(index,1)[0];this.channelListText=entries.join('\\n');this.channelList=entries;this.listMessage='Sender '+removed+' entfernt und automatisch gespeichert';this.send({topic:'scan-list',payload:{rawText:this.channelListText,channels:entries}})},saveList(){this.channelList=this.parsedList.slice();this.listMessage=this.channelList.length+' Sender werden gespeichert';this.send({topic:'scan-list',payload:{rawText:this.channelListText,channels:this.channelList}})},clearList(){this.channelListText='';this.saveList()},startNumberAutomation(){this.scanRunning=true;this.automationType='number';this.send({topic:'automation-start-number',payload:{interval:Number(this.scanInterval)}})},startChannelUpAutomation(){this.scanRunning=true;this.automationType='channel-up';this.send({topic:'automation-start-channel-up',payload:{interval:Number(this.scanInterval)}})},startListAutomation(){const channels=this.parsedList.slice();if(!channels.length){this.listMessage='Start nicht möglich: Senderliste ist leer';this.scanRunning=false;return}this.channelList=channels;this.scanRunning=true;this.automationType='list';this.send({topic:'automation-start-list',payload:{interval:Number(this.scanInterval),rawText:this.channelListText,channels}})},stopAllAutomation(){this.scanRunning=false;this.automationType='off';this.send({topic:'automation-stop-all',payload:'stop'})},resetAutomation(){this.scanRunning=false;this.automationType='off';this.scanNext=this.scanMode==='list'?(this.parsedList[0]||'--'):'001';this.send({topic:'automation-reset',payload:'reset'})},scan(v){this.send({topic:'scan',payload:v})},setSystem(){this.send({topic:'system-set',payload:this.system})},saveVideo(){this.videoCaptureSettle=Math.max(0,Math.min(5,Math.round(Number(this.videoCaptureSettle)||2)));this.send({topic:'video-capture-save',payload:{settle:this.videoCaptureSettle,a:{enabled:this.videoCaptureEnabledA,video:this.videoDeviceA,audio:this.audioDeviceA},b:{enabled:this.videoCaptureEnabledB,video:this.videoDeviceB,audio:this.audioDeviceB}}})},setRecording(){this.send({topic:'record-control',payload:this.recordingEnabled})},changeRetention(d){this.retentionWeeks=Math.max(1,Math.min(52,Number(this.retentionWeeks||4)+d));this.applyRetention()},applyRetention(){this.retentionWeeks=Math.max(1,Math.min(52,Math.round(Number(this.retentionWeeks)||4)));this.send({topic:'retention-save',payload:this.retentionWeeks})},toggleDirectory(){this.directoryCollapsed=!this.directoryCollapsed;try{localStorage.setItem('magentatvDirectoryCollapsed',String(this.directoryCollapsed))}catch(e){}},toggleConfig(){this.configCollapsed=!this.configCollapsed;try{localStorage.setItem('magentatvConfigCollapsed',String(this.configCollapsed))}catch(e){}},toggleAutomationSetup(){this.automationSetupCollapsed=!this.automationSetupCollapsed;try{localStorage.setItem('magentatvAutomationSetupCollapsed',String(this.automationSetupCollapsed))}catch(e){}},toggleDirectoryTools(){this.directoryToolsCollapsed=!this.directoryToolsCollapsed;try{localStorage.setItem('magentatvDirectoryToolsCollapsed',String(this.directoryToolsCollapsed))}catch(e){}},updateScrollFocus(){const doc=document.documentElement;const maxScroll=Math.max(1,doc.scrollHeight-doc.clientHeight);this.scrolledDown=(window.scrollY/maxScroll)>0.5;if(this._scrollFabEl)this._scrollFabEl.textContent=this.scrolledDown?'▲':'▼';if(this._scrollFabEl)this._scrollFabEl.title=this.scrolledDown?'Nach oben zur Übersicht':'Nach unten zur Fernbedienung';},toggleScrollFocus(){const doc=document.documentElement;const target=this.scrolledDown?0:doc.scrollHeight;window.scrollTo({top:target,behavior:'smooth'});},mountScrollFab(){if(this._scrollFabEl)return;if(!document.getElementById('magentatv-scrollfab-style')){const style=document.createElement('style');style.id='magentatv-scrollfab-style';style.textContent='.magentatv-scrollfab{position:fixed;right:22px;bottom:22px;z-index:2147483000;width:46px;height:46px;border-radius:50%;border:1px solid #4b4b50;background:#29292d;color:#e20074;font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5);font-family:Arial;line-height:1}.magentatv-scrollfab:hover{background:#4a1731;border-color:#e20074}';document.head.appendChild(style);}const btn=document.createElement('button');btn.type='button';btn.className='magentatv-scrollfab';btn.textContent=this.scrolledDown?'▲':'▼';btn.title=this.scrolledDown?'Nach oben zur Übersicht':'Nach unten zur Fernbedienung';btn.addEventListener('click',()=>this.toggleScrollFocus());document.body.appendChild(btn);this._scrollFabEl=btn;},downloadDirectoryJson(){const data={version:1,saved_at:new Date().toISOString(),stations:this.directory};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='magentatv_channel_directory.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);this.directoryMessage='Gesamtsenderliste als JSON gespeichert'},openDirectoryFile(){if(this.$refs.directoryFile)this.$refs.directoryFile.click()},clearDirectory(){if(!Object.keys(this.directory).length){this.directoryMessage='Gesamtsenderliste ist bereits leer';return}if(!window.confirm('Gesamtsenderliste wirklich vollständig löschen? Dies kann nicht rückgängig gemacht werden.'))return;this.directory={};this.directoryMessage='Gesamtsenderliste gelöscht';this.send({topic:'directory-import',payload:{}});},adoptAllKnownToList(){const known=this.positions.filter(p=>!!this.directory[String(Number(p))]);if(!known.length){this.listMessage='Keine erkannten Sender zum Übernehmen vorhanden';return}const current=this.parsedList.map(String);const additions=known.filter(p=>!current.includes(String(p)));if(!additions.length){this.listMessage='Alle erkannten Sender sind bereits in der Umschaltliste';return}const merged=current.concat(additions);this.channelListText=merged.join('\\n');this.channelList=this.parsedList.slice();this.listMessage=additions.length+' erkannte Sender zur Umschaltliste hinzugefügt, bitte Liste übernehmen';},loadDirectoryJson(event){const file=event.target.files&&event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(String(reader.result||'{}'));const stations=data&&typeof data.stations==='object'&&!Array.isArray(data.stations)?data.stations:data;if(!stations||typeof stations!=='object'||Array.isArray(stations))throw new Error('Format');const clean={};Object.keys(stations).forEach(k=>{const key=String(Number(k));const name=String(stations[k]||'').trim();if(/^\\d{1,3}$/.test(key)&&name)clean[key]=name});this.directory=clean;this.directoryMessage=Object.keys(clean).length+' Sender aus JSON geladen';this.send({topic:'directory-import',payload:clean});}catch(e){this.directoryMessage='JSON-Datei konnte nicht gelesen werden'}event.target.value='';};reader.onerror=()=>{this.directoryMessage='JSON-Datei konnte nicht gelesen werden'};reader.readAsText(file,'UTF-8')},exportExcel(mode){this.send({topic:'excel-export',payload:mode})}}}</script>\n<style>.app{display:flex;gap:16px;align-items:flex-start;padding:12px;background:#111;color:#eee;font-family:Arial;box-sizing:border-box}.remote{width:405px;min-width:360px;padding:22px;border-radius:32px;background:linear-gradient(145deg,#36363a,#171719);border:1px solid #48484d;box-sizing:border-box}.remote header,.monitor header{display:flex;justify-content:space-between}.remote header b,.monitor header b{color:#e20074}.remote header small,.remote header span,.monitor header small{display:block;color:#999;font-size:10px}.remote button,.list button{background:#29292d;color:#ddd;border:1px solid #4b4b50;cursor:pointer}.power{width:46px;height:46px;border-radius:50%}.cfg,.automation{margin-top:14px;padding:12px;background:#101012;border-radius:14px}.cfgtitle{position:relative;display:flex;width:100%;justify-content:space-between;align-items:center;padding:0;border:0;background:none;color:#eee;text-align:left;cursor:pointer;margin-bottom:0}.cfgtitle b{color:#e20074;font-size:11px}.cfgtitle:hover b{color:#ff4fa3}.cfgbody,.automationsetup,.directorytoolsbody{margin-top:12px}.directorytools{margin-top:0}.boxstatus{margin-top:14px;padding:10px 12px;background:#0d0d10;border:1px solid #3e3e43;border-radius:14px;display:flex;flex-direction:column;gap:6px}.boxstatusrow{display:flex;align-items:center;gap:8px;min-width:0}.boxlabel{flex-shrink:0;width:48px;font-size:9px;font-weight:bold;color:#999;letter-spacing:.5px}.boxstatusrow b{flex:1;min-width:0;font-size:15px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.offsettag{flex-shrink:0;background:#29292d;color:#ffad42;padding:3px 7px;border-radius:7px;font-size:9px}.ledhint{position:relative;flex-shrink:0;display:inline-block;width:10px;height:10px;border-radius:50%;background:#444;cursor:default}.ledhint.on{background:#39d98a;box-shadow:0 0 8px #39d98a}.ledhint::after{content:attr(data-hint);position:absolute;left:0;bottom:calc(100% + 8px);z-index:30;padding:6px 9px;border-radius:7px;background:#050506;color:#fff;font-size:9px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;transition-delay:.3s}.ledhint:hover::after{opacity:1;visibility:visible}.checkstatusrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}.checkstatusbtn{flex-shrink:0;background:#29292d;border:1px solid #4b4b50;color:#e20074;border-radius:8px;padding:6px 10px;font-size:10px;font-weight:bold;cursor:pointer}.checkstatusbtn:hover{border-color:#e20074;background:#4a1731}.checkstatusrow small{color:#999;font-size:9px}.row{display:grid;grid-template-columns:1fr auto;gap:7px}.row input,.editor textarea,.stepper input{width:100%;box-sizing:border-box;background:#09090b;color:#eee;border:1px solid #4b4b50;border-radius:8px;padding:9px}.status{margin:14px 0;padding:10px;background:#0c0c0e;border-radius:10px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.statuslines{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}.statusrow{display:flex;align-items:center}.statusrow b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#444;margin-right:8px;flex-shrink:0}.status i.on{background:#39d98a;box-shadow:0 0 8px #39d98a}.statusbtn{flex-shrink:0;background:#29292d;border:1px solid #4b4b50;color:#e20074;border-radius:8px;padding:8px 12px;font-weight:bold;cursor:pointer;align-self:center}.statusbtn:hover{border-color:#e20074;background:#4a1731}.boxenable{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:11px;color:#ccc}.pinset{margin-top:14px;padding:12px;background:#101012;border-radius:14px}.pinbody{margin-top:12px}.pinbody>small{display:block;color:#999;font-size:9px;margin-bottom:8px}.pinresetbtn{width:100%;margin-top:8px;height:36px;border-radius:9px;background:#29292d;border:1px solid #4b4b50;color:#ffad42;cursor:pointer}.pinresetbtn:hover{border-color:#ffad42;background:#3a2a12}.boxenable input[type=checkbox]{width:16px;height:16px}.modehint2{display:block;margin-top:8px;color:#999;font-size:9px}.programme{min-height:140px;padding:13px;background:#0d0d10;border:1px solid #3e3e43;border-radius:16px}.request{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px}.request span{font-size:8px;color:#888}.request b{display:block;font-size:15px;color:#66aaff}.request .confirmed b{color:#39d98a}.request .substitute b{color:#ffad42}.request .channelstep b{color:#66aaff}.station,.current div{display:flex;align-items:center;gap:10px}.station em,.current em{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:#e20074;font-style:normal;font-weight:bold}.meta{display:flex;gap:5px;flex-wrap:wrap}.meta span{font-size:9px;background:#29292d;padding:4px 6px;border-radius:7px}.loading{min-height:80px;display:flex;justify-content:center;align-items:center;gap:10px}.loading i{width:20px;height:20px;border:3px solid #444;border-top-color:#e20074;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.modes,.editor>div,.scanbuttons,.rock,.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.modes{grid-template-columns:1fr 1fr;margin:9px 0}.editor>div{grid-template-columns:2fr 1fr;margin-top:7px}.rangehint{display:block;color:#999;font-size:9px;margin-top:3px}.fileinput{display:none}.importrow{display:grid!important;grid-template-columns:2fr 1fr!important;align-items:center}.importrow span{font-size:9px;color:#999;text-align:center}.stepper{display:grid;grid-template-columns:45px 1fr 45px;gap:7px;margin:7px 0}.stepper input{text-align:center}.automation button,.rock button{height:40px;border-radius:10px}.startbtn{border-color:#39d98a!important}.chplusbtn{border-color:#66aaff!important;background:#17304a!important}.allscanbuttons{grid-template-columns:1fr 1fr 1fr}.allscanbuttons button{font-size:10px}.stopbtn{border-color:#ff5269!important}.resetbtn{border-color:#ffad42!important}.sel{border-color:#e20074!important;background:#4a1731!important}.recordline{display:block;margin-top:12px;padding-top:10px;border-top:1px solid #343438}.recordline label{display:flex;align-items:center;gap:8px}.exportline{display:block;margin-top:12px;padding-top:10px;border-top:1px solid #343438}.exportline>div{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}.exportline small{display:block;color:#999;margin-top:6px}.specialkeys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 8px}.specialkeys button{height:42px;border-radius:20px;font-size:9px;font-weight:bold;background:#29292d;color:#ddd;border:1px solid #4b4b50;cursor:pointer}.specialkeys button:hover{border-color:#e20074;background:#4a1731}.specialkeys button:active{transform:translateY(1px)}.nav{position:relative;width:205px;height:205px;margin:16px auto;border-radius:50%;background:#252529}.nav button{position:absolute;border:0;background:none;font-size:23px}.up{top:12px;left:89px}.down{bottom:12px;left:89px}.left{left:14px;top:90px}.right{right:14px;top:90px}.nav .ok{left:68px;top:68px;width:70px;height:70px;border-radius:50%;border:2px solid #e20074;background:#343438}.display{margin:14px 0 8px;padding:12px;background:#09090b;border-radius:10px}.nums button{height:42px;border-radius:20px}.monitor{width:460px;min-width:360px;padding:20px;background:#171719;border:1px solid #3d3d42;border-radius:24px;box-sizing:border-box;position:sticky;top:12px}.monitor header>span{padding:6px 10px;border-radius:20px;background:#333;color:#999;font-size:10px}.monitor header>span.active{background:#143d2c;color:#39d98a}.current{margin-top:16px;padding:16px;background:#0d0d10;border-radius:16px}.progress{display:flex;justify-content:space-between;margin-top:16px;font-size:11px;color:#aaa}.bar{height:7px;background:#29292d;border-radius:8px;margin:7px 0 14px;overflow:hidden}.bar i{display:block;height:100%;background:#e20074}.controllist{margin:12px 0;padding:10px;background:#101012;border:1px solid #33333a;border-radius:13px}.controllist header{display:flex;justify-content:space-between;align-items:center}.controllist header b,.fulllisttitle b{color:#e20074;font-size:10px}.controllist header small,.fulllisttitle small{display:block;color:#8f8f97;font-size:9px}.controllist header>span{display:grid;place-items:center;min-width:28px;height:24px;padding:0 5px;border-radius:13px;background:#4a1731;color:#fff;font-size:10px}.controlhead,.controlrows>div{display:grid;grid-template-columns:24px 28px 42px 1fr 30px;gap:6px;align-items:center}.controlhead{padding:8px 5px 5px;color:#777;font-size:8px}.controlrows{min-height:120px;max-height:900px;overflow:auto;scroll-behavior:smooth;transition:height .18s ease}.controlrow.focus{box-shadow:inset 4px 0 0 #e20074}.listresize{position:relative;height:16px;margin:2px -2px -8px;cursor:ns-resize;display:grid;place-items:center}.listresize span{display:block;width:56px;height:4px;border-radius:4px;background:#55555d}.listresize:hover span{background:#e20074}.listresize::after{content:attr(data-hint);position:absolute;right:0;bottom:18px;z-index:30;padding:6px 9px;border-radius:7px;background:#050506;color:#fff;font-size:9px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;transition-delay:.7s}.listresize:hover::after{opacity:1;visibility:visible}body.resizing-control-list{cursor:ns-resize!important;user-select:none!important}.controlrows>div{padding:7px 5px;border-top:1px solid #29292d;font-size:10px}.controlrow[draggable=\"true\"]{cursor:grab}.controlrow[draggable=\"true\"]:active{cursor:grabbing}.controlrow.dragging{opacity:.35}.controlrow.dragover{box-shadow:inset 0 2px 0 #66aaff;background:#17283a}.draghandle{position:relative;display:grid;place-items:center;color:#8f8f99;font-size:15px;letter-spacing:-3px;cursor:grab}.draghandle::after{content:attr(data-hint);position:absolute;left:0;bottom:calc(100% + 7px);z-index:30;padding:6px 9px;border-radius:7px;background:#050506;color:#fff;font-size:9px;letter-spacing:0;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;transition-delay:.7s}.draghandle:hover::after{opacity:1;visibility:visible}.ordernr{color:#888}.controlname{display:inline-flex;align-items:center;gap:5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.controlrows>div.next{background:#29231c}.controlrows>div.current{background:#4a1731}.controlrows>div.nextb{box-shadow:inset 0 0 0 1px #66aaff}.nextbtag{flex-shrink:0;background:#17304a;color:#66aaff;padding:2px 5px;border-radius:6px;font-size:8px;font-weight:bold}.controlrows button{position:relative;width:26px;height:26px;border-radius:50%;padding:0;color:#ff8c9b}.controlrows button:disabled{opacity:.35;cursor:default}.controlrows button:not(:disabled)::after{content:attr(data-hint);position:absolute;right:0;bottom:calc(100% + 6px);z-index:25;padding:6px 9px;border-radius:7px;background:#050506;color:#fff;font-size:9px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;transition-delay:.7s}.controlrows button:not(:disabled):hover::after{opacity:1;visibility:visible}.controlempty{display:block!important;padding:14px!important;text-align:center;color:#777}.fulllisttitle{position:relative;display:flex;width:100%;justify-content:space-between;align-items:center;padding:8px;border:0;border-radius:9px;background:#202024;color:#eee;text-align:left;cursor:pointer}.fulllisttitle:hover{background:#29292e}.fulllisttitle::after{content:attr(data-hint);position:absolute;right:8px;bottom:calc(100% + 6px);z-index:30;padding:6px 9px;border-radius:7px;background:#050506;color:#fff;font-size:9px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;transition-delay:.7s}.fulllisttitle:hover::after{opacity:1;visibility:visible}.collapseicon{display:inline-block;color:#e20074;font-size:20px;line-height:1;transition:transform .2s ease}.collapseicon.collapsed{transform:rotate(-90deg)}.directorybody{overflow:visible}.directorytools{margin:10px 0;padding:10px;background:#101012;border-radius:12px}.directorytools>b{font-size:10px;color:#e20074}.directorytools>div{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:7px}.directorytools button{height:36px;border-radius:9px}.dangerbtn{border-color:#ff5269!important;color:#ff8c9b}.dangerbtn:hover{background:#3a1319!important}.adoptrow{margin-top:8px}.adoptrow button{width:100%;min-height:40px;height:auto;padding:8px 10px;border-radius:9px;border-color:#39d98a!important;color:#39d98a;white-space:normal;line-height:1.3;font-size:11px}.adoptrow button:hover{background:#123324!important}.directorytools small{display:block;color:#999;margin-top:6px}.head,.list button{display:grid;grid-template-columns:55px 1fr 72px;gap:8px;align-items:center}.head{font-size:9px;color:#777;padding:8px}.list{max-height:700px;overflow:auto;scroll-behavior:smooth}.list button{width:100%;padding:9px 8px;border-width:1px 0 0;text-align:left;position:relative}.list button:not(:disabled)::after{content:attr(data-hint);position:absolute;left:70px;bottom:calc(100% + 6px);z-index:20;padding:6px 9px;border-radius:7px;background:#050506;color:#fff;font-size:9px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease;transition-delay:.7s;box-shadow:0 4px 14px #000}.list button:not(:disabled):hover::after{opacity:1;visibility:visible}.modehint{margin-top:8px;padding:7px 8px;border-radius:8px;background:#222228;color:#bbb;font-size:9px;line-height:1.35}.list button.current{background:#4a1731;border-left:3px solid #e20074}.list button.next{background:#29231c}.list button:disabled{cursor:default;opacity:.8}.list small{text-align:right;color:#888;font-size:8px}@media(max-width:950px){.app{flex-direction:column;align-items:center}.monitor{position:static;width:405px;max-width:96vw}.remote{max-width:96vw}}.storageset,.videocfg{margin-top:14px;padding:10px;background:#18181b;border-radius:14px}.storageset>b{display:block;color:#e20074;margin-bottom:6px}.storageset small,.videocfgbody>small{display:block;color:#bbb;font-size:10px;margin:0 0 8px}.storageset select,.videocfgbody input{width:100%;box-sizing:border-box;padding:8px;border:1px solid #4c4c51;border-radius:7px;background:#242428;color:#fff;font-size:11px}.storageset p{font-size:10px;line-height:1.6;color:#ccc;word-break:break-all}.storageset p span{color:#e20074}.videobox{margin:10px 0;padding:10px;background:#101012;border-radius:12px}.videobox label{display:flex;align-items:center;gap:8px;color:#ddd;font-size:11px;margin-bottom:8px}.videobox input:not([type=checkbox]){margin:4px 0}.videobox input[type=checkbox]{width:16px;height:16px}.videobox input:disabled{opacity:.45}</style>",
+        "storeOutMessages": true,
+        "passthru": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 200,
+        "y": 180,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "a1d85f1acf6db2a9",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Zentralrouter mit getrennten Funktionspfaden v1.2.3",
+        "func": "const defaultIpA = \"192.168.2.41\";\nconst defaultIpB = \"192.168.2.42\";\nconst validIp = value => {\n    const parts = String(value || \"\").trim().split(\".\");\n    return parts.length === 4 && parts.every(part => /^\\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255);\n};\n\nlet ipA = flow.get(\"magentatvTargetIpA\") || flow.get(\"magentatvTargetIp\") || defaultIpA;\nlet ipB = flow.get(\"magentatvTargetIpB\") || defaultIpB;\nlet enabledA = flow.get(\"magentatvBoxAEnabled\");\nif (enabledA === undefined) enabledA = true;\nlet enabledB = flow.get(\"magentatvBoxBEnabled\");\nif (enabledB === undefined) enabledB = false;\nlet scanMode = flow.get(\"magentatvScanMode\") || \"sequential\";\n\nfunction activeBoxes() {\n    if (scanMode === \"list\") return [{ip: ipA, box: \"A\"}, {ip: ipB, box: \"B\"}];\n    const boxes = [];\n    if (enabledA) boxes.push({ip: ipA, box: \"A\"});\n    if (enabledB) boxes.push({ip: ipB, box: \"B\"});\n    return boxes;\n}\n\nfunction infoSourceIp() {\n    if (scanMode === \"list\") return ipA;\n    if (enabledA) return ipA;\n    if (enabledB) return ipB;\n    return ipA;\n}\n\nfunction ipBoxConfigFile() {\n    const svcDir = flow.get(\"magentatvStorageServiceDir\") || ((flow.get(\"magentatvSystem\") === \"development\" ? \"/home/pi/project/zarpy/rec\" : \"/mnt/rec\") + \"/services\");\n    return {\n        filename: svcDir + \"/magentatv_ip_config.json\",\n        payload: JSON.stringify({version:2, saved_at:new Date().toISOString(), targetIpA: ipA, targetIpB: ipB, boxAEnabled: enabledA, boxBEnabled: enabledB}, null, 2)\n    };\n}\n\nfunction dashboardBoxState(extra = {}) {\n    return {payload:{\n        targetIpA: ipA,\n        targetIpB: ipB,\n        boxAEnabled: enabledA,\n        boxBEnabled: enabledB,\n        scanMode,\n        ...extra\n    }};\n}\n\nif (msg.topic === \"frontend-ready\") {\n    const uiMsg = dashboardBoxState({\n        system: flow.get(\"magentatvSystem\") || \"production\",\n        recordingEnabled: flow.get(\"magentatvRecordingEnabled\") === true,\n        directory: flow.get(\"magentatvDirectory\") || {},\n        pinConfigured: !!(flow.get(\"magentatvPin\"))\n    });\n    return [null, null, msg, null, {topic:\"status-check\"}, uiMsg, null, msg, null];\n}\n\nif (msg.topic === \"config-ip-a\" || msg.topic === \"config-ip-b\") {\n    const which = msg.topic === \"config-ip-a\" ? \"A\" : \"B\";\n    if (!validIp(msg.payload)) {\n        return [null, null, null, null, null, dashboardBoxState({configMessage:\"Ungültige IPv4-Adresse für Box \" + which}), null];\n    }\n    const value = String(msg.payload).trim();\n    if (which === \"A\") { ipA = value; flow.set(\"magentatvTargetIpA\", ipA); flow.set(\"magentatvTargetIp\", ipA); }\n    else { ipB = value; flow.set(\"magentatvTargetIpB\", ipB); }\n\n    const connectCommands = [];\n    if (which === \"A\") connectCommands.push(\"connect \" + ipA + \":5555\");\n    else connectCommands.push(\"connect \" + ipB + \":5555\");\n\n    return [\n        {payload: connectCommands},\n        null,\n        null,\n        null,\n        {topic:\"status-check\"},\n        dashboardBoxState({configMessage:\"IP für Box \" + which + \" gespeichert\"}),\n        null,\n        null,\n        ipBoxConfigFile()\n    ];\n}\n\nif (msg.topic === \"pin-save\") {\n    const pin = String(msg.payload || \"\").trim();\n    if (!/^\\\\d{4,8}$/.test(pin)) {\n        return [null, null, null, null, null, dashboardBoxState({configMessage:\"Ungültige PIN: bitte 4 bis 8 Ziffern eingeben\"}), null];\n    }\n    flow.set(\"magentatvPin\", pin);\n    flow.set(\"magentatvPinFailStreak\", 0);\n    const svcDir = flow.get(\"magentatvStorageServiceDir\") || ((flow.get(\"magentatvSystem\") === \"development\" ? \"/home/pi/project/zarpy/rec\" : \"/mnt/rec\") + \"/services\");\n    const pinConfigFile = { filename: svcDir + \"/magentatv_pin_config.json\", payload: JSON.stringify({version:1, saved_at:new Date().toISOString(), pin}, null, 2) };\n    return [null, null, null, null, null, dashboardBoxState({configMessage:\"PIN gespeichert\"}), null, null, pinConfigFile];\n}\n\nif (msg.topic === \"pin-reset-lock\") {\n    flow.set(\"magentatvPinFailStreak\", 0);\n    return [null, null, null, null, null, dashboardBoxState({configMessage:\"PIN-Sperre zurückgesetzt\"}), null];\n}\n\nif (msg.topic === \"box-a-enabled\" || msg.topic === \"box-b-enabled\") {\n    const which = msg.topic === \"box-a-enabled\" ? \"A\" : \"B\";\n    const value = msg.payload === true;\n    if (scanMode === \"list\") {\n        return [null, null, null, null, null, dashboardBoxState({configMessage:\"Im Listenmodus sind beide Boxen aktiv\"}), null];\n    }\n    if (which === \"A\") { enabledA = value; flow.set(\"magentatvBoxAEnabled\", enabledA); }\n    else { enabledB = value; flow.set(\"magentatvBoxBEnabled\", enabledB); }\n    return [null, null, null, null, null, dashboardBoxState({configMessage:\"Box \" + which + (value ? \" aktiviert\" : \" deaktiviert\")}), null, {topic:msg.topic,payload:value}, ipBoxConfigFile()];\n}\n\nif (msg.topic === \"status-check\") return [null, null, null, null, msg, null, null];\nif (msg.topic === \"record-control\") return [null, null, null, msg, null, null, null];\nif (msg.topic === \"excel-export\") return [null, null, null, null, null, null, msg];\nif (msg.topic === \"video-capture-save\" || msg.topic === \"system-set\") return [null,null,null,null,null,null,null,msg];\n\nif (msg.topic === \"scan-interval\") { flow.set(\"magentatvScanInterval\", Math.max(8, Math.min(3600, Math.round(Number(msg.payload) || 10)))); }\n\n// Automatik-Config Interval sofort beim Neustart global sichern\nif (msg.topic === \"automation-config-load\") {\n    const x = msg.payload || {};\n    if (x.interval) flow.set(\"magentatvScanInterval\", Math.max(8, Math.min(3600, Number(x.interval))));\n}\n\nif ([\"automation-start-number\",\"automation-start-channel-up\",\"automation-start-list\"].includes(msg.topic)) {\n    const x = msg.payload || {};\n    flow.set(\"magentatvScanInterval\", Math.max(8, Math.min(3600, Math.round(Number(x.interval) || Number(flow.get(\"magentatvScanInterval\") || 10)))));\n}\n\nif ([\n    \"scan\", \"scan-interval\", \"scan-list\", \"scan-list-load\",\n    \"scan-start-config\", \"automation-start\", \"automation-stop\", \"automation-reset\",\n    \"automation-start-number\", \"automation-start-channel-up\", \"automation-start-list\", \"automation-stop-all\",\n    \"directory-load\", \"directory-import\", \"list-offset\", \"automation-config-load\", \"autostart-config\"\n].includes(msg.topic)) {\n    return [null, null, msg, null, null, null, null];\n}\n\nif (msg.topic === \"connect\") {\n    msg.payload = [ipA, ipB].map(target => \"connect \" + target + \":5555\");\n    return [msg, null, null, null, null, null, null];\n}\n\nif (msg.topic === \"key-all-boxes\") {\n    const key = String(msg.payload || \"\");\n    if (!/^KEYCODE_[A-Z0-9_]+$/.test(key)) return null;\n    const ips = [ipA, ipB].filter((ip, i, all) => validIp(ip) && all.indexOf(ip) === i);\n    if (!ips.length) return [null, null, null, null, null, dashboardBoxState({configMessage:\"TV-Taste nicht gesendet: keine gültige Box-IP\"}), null];\n    return [{topic:\"key-command\", payload: ips.map(ip => \"-s \" + ip + \":5555 shell input keyevent \" + key)}, null, null, null, null, dashboardBoxState({configMessage:\"TV-Taste an \" + ips.length + \" konfigurierte Box(en) gesendet\"}), null];\n}\n\nif (msg.topic === \"key\") {\n    const key = String(msg.payload || \"\");\n    if (!/^KEYCODE_[A-Z0-9_]+$/.test(key)) return null;\n\n    const boxes = activeBoxes();\n    const infoIp = infoSourceIp();\n    const keyMsg = {\n        topic:\"key-command\",\n        payload: boxes.map(b => \"-s \" + b.ip + \":5555 shell input keyevent \" + key)\n    };\n\n    if (key === \"KEYCODE_CHANNEL_UP\" || key === \"KEYCODE_CHANNEL_DOWN\") {\n        const direction = key === \"KEYCODE_CHANNEL_UP\" ? \"up\" : \"down\";\n        const requestedAction = direction === \"up\" ? \"CH+\" : \"CH-\";\n        const automatic = msg.scanGenerated === true || msg.automationGenerated === true;\n        flow.set(\"lastRequestedChannel\", requestedAction);\n        const infoMsg = {\n            topic:\"info\",\n            requestedChannel:requestedAction,\n            channelDirection:direction,\n            scanGenerated:automatic,\n            targetIp:infoIp,\n            payload:\"refresh\"\n        };\n        const uiMsg = {payload:{\n            requestedChannel:requestedAction,\n            actualChannel:\"\",\n            loading:true,\n            status:direction === \"up\" ? \"CH+ angefordert\" : \"CH- angefordert\"\n        }};\n        return [keyMsg, infoMsg, null, null, null, uiMsg, null];\n    }\n\n    const analysisKeys = {\n        KEYCODE_BACK: \"BACK / EXIT\",\n        KEYCODE_HOME: \"HOME\",\n        KEYCODE_INFO: \"INFO\",\n        KEYCODE_TV: \"TV\"\n    };\n\n    if (analysisKeys[key]) {\n        const requestedAction = analysisKeys[key];\n        flow.set(\"lastRequestedChannel\", requestedAction);\n        const infoMsg = {\n            topic:\"info\",\n            requestedChannel:requestedAction,\n            remoteAction:key,\n            scanGenerated:false,\n            targetIp:infoIp,\n            payload:\"refresh\"\n        };\n        const uiMsg = {payload:{\n            requestedChannel:requestedAction,\n            actualChannel:\"\",\n            loading:true,\n            status:requestedAction + \" ausgeführt, Senderdaten werden aktualisiert\"\n        }};\n        return [keyMsg, infoMsg, null, null, null, uiMsg, null];\n    }\n\n    return [keyMsg, null, null, null, null, null, null];\n}\n\nif (msg.topic === \"channel\") {\n    const channel = String(msg.payload || \"\").trim();\n    if (!/^\\d{1,3}$/.test(channel)) return null;\n\n    const channelBRaw = msg.channelB !== undefined ? String(msg.channelB).trim() : channel;\n    const channelB = /^\\d{1,3}$/.test(channelBRaw) ? channelBRaw : channel;\n\n    const keyCommandsFor = (ch) => ch.split(\"\")\n        .map(digit => \"input keyevent KEYCODE_\" + digit)\n        .join(\"; sleep 0.25; \");\n\n    const boxes = activeBoxes();\n    const infoIp = infoSourceIp();\n    const channelMsg = {\n        topic:\"channel-command\",\n        requestedChannel:channel,\n        scanGenerated:msg.scanGenerated === true,\n        targetIp:infoIp,\n        payload: boxes.map(b => {\n            const ch = b.box === \"B\" ? channelB : channel;\n            return \"-s \" + b.ip + \":5555 shell \\\"\" + keyCommandsFor(ch) + \"; sleep 0.70; input keyevent KEYCODE_ENTER\\\"\";\n        })\n    };\n\n    const infoMsg = {\n        topic:\"info\",\n        requestedChannel:channel,\n        scanGenerated:msg.scanGenerated === true,\n        targetIp:infoIp,\n        payload:\"refresh\"\n    };\n\n    flow.set(\"lastRequestedChannel\", channel);\n    flow.set(\"lastRequestedChannelB\", channelB);\n\n    const uiMsg = {payload:{\n        requestedChannel:channel,\n        requestedChannelB:channelB,\n        actualChannel:\"\",\n        loading:true,\n        status: channelB !== channel\n            ? \"Box A: Sender \" + channel + \" · Box B: Sender \" + channelB + \" werden angesteuert\"\n            : \"Sender \" + channel + \" wird angesteuert\"\n    }};\n\n    const cap=msg.scanGenerated===true?{topic:\"video-capture-start\",payload:{channel,channelB,scanInterval:flow.get(\"magentatvScanInterval\")||10}}:null;return [channelMsg,infoMsg,null,null,null,uiMsg,null,cap];\n}\n\nreturn null;\n",
+        "outputs": 9,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 180,
+        "wires": [
+            [
+                "fed1385913c0cff4"
+            ],
+            [
+                "ad6fa5bb2e6dd92b"
+            ],
+            [
+                "63dbbd9a735e5cd0",
+                "fa5636a66427b2a1"
+            ],
+            [
+                "91b627143e0fe478"
+            ],
+            [
+                "23e27ffbcacc2fe5"
+            ],
+            [
+                "2526f0fab4d45d47"
+            ],
+            [
+                "cb7634873ecdbab5"
+            ],
+            [
+                "e3046d1e3ffbb082",
+                "2b0f40c617fb4d9e"
+            ],
+            [
+                "98d5e00da1bde530"
+            ]
+        ]
+    },
+    {
+        "id": "475f7c7b563d2361",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "adb",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "15",
+        "winHide": true,
+        "oldrc": false,
+        "name": "ADB ausfuehren",
+        "x": 800,
+        "y": 40,
+        "wires": [
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "23e27ffbcacc2fe5",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Robustes ADB-Statuskommando",
+        "func": "const ipA=flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\";\nconst ipB=flow.get(\"magentatvTargetIpB\")||\"192.168.2.42\";\nconst check=(target)=>\"adb -s \"+target+\":5555 get-state 2>/dev/null | grep -qx device && echo ONLINE || echo OFFLINE\";\nmsg.payload='-c \"echo -n A:; '+check(ipA)+'; echo -n B:; '+check(ipB)+'\"';\nreturn msg;",
+        "outputs": 1,
+        "x": 750,
+        "y": 100,
+        "wires": [
+            [
+                "e721ce2393930117"
+            ]
+        ]
+    },
+    {
+        "id": "e721ce2393930117",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "/bin/sh",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "winHide": true,
+        "oldrc": false,
+        "name": "ADB ONLINE OFFLINE pruefen",
+        "x": 1190,
+        "y": 100,
+        "wires": [
+            [
+                "12d77494a16a0e1e"
+            ],
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "12d77494a16a0e1e",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "ONLINE OFFLINE fuer LED",
+        "func": "const raw=String(msg.payload||\"\");\nconst mA=raw.match(/A:(ONLINE|OFFLINE)/i);\nconst mB=raw.match(/B:(ONLINE|OFFLINE)/i);\nif(!mA&&!mB)return null;\nconst onA=mA?mA[1].toUpperCase()===\"ONLINE\":false;\nconst onB=mB?mB[1].toUpperCase()===\"ONLINE\":false;\nmsg.payload={\n    onlineA:onA,\n    onlineB:onB,\n    online:onA,\n    status:(onA?\"Box A verbunden\":\"Box A nicht verbunden\")+\" · \"+(onB?\"Box B verbunden\":\"Box B nicht verbunden\")\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 1520,
+        "y": 100,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "ad6fa5bb2e6dd92b",
+        "type": "delay",
+        "z": "f26b92fccfb2c7cb",
+        "name": "2,5 Sekunden warten",
+        "pauseType": "delay",
+        "timeout": "2.5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 900,
+        "y": 240,
+        "wires": [
+            [
+                "48320986d41ec579"
+            ]
+        ]
+    },
+    {
+        "id": "1916dbf6a5d7c708",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "adb",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "winHide": true,
+        "oldrc": false,
+        "name": "UI-Dump lesen - stabil",
+        "x": 1220,
+        "y": 180,
+        "wires": [
+            [
+                "f571d3d7f476c187"
+            ],
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "f571d3d7f476c187",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Sendungsdaten parsen und Sender lernen v1.2.0",
+        "func": "const xml=String(msg.payload||\"\");\n\nconst pinScreenPattern=/PIN|Kindersicherung|Jugendschutz|Elternschutz|Zugangscode|Code eingeben/i;\nif(pinScreenPattern.test(xml)){\n    const pin=String(flow.get(\"magentatvPin\")||\"\").trim();\n    const failStreak=Number(flow.get(\"magentatvPinFailStreak\")||0);\n    const lastAttempt=Number(flow.get(\"magentatvPinLastAttempt\")||0);\n    const now=Date.now();\n    const requestedChannel0=msg.requestedChannel||flow.get(\"lastRequestedChannel\")||\"\";\n    if(failStreak>=2){\n        return [{payload:{programError:\"PIN-Eingabe zweimal erfolglos - automatische Eingabe pausiert, bitte im Menü PIN pruefen und Sperre zuruecksetzen\",loading:false,requestedChannel:requestedChannel0}},null,null,null,null];\n    }\n    if(!pin||!/^\\d{4,8}$/.test(pin)){\n        return [{payload:{programError:\"PIN-Bildschirm erkannt, aber keine gueltige PIN im Menue hinterlegt\",loading:false,requestedChannel:requestedChannel0}},null,null,null,null];\n    }\n    if((now-lastAttempt)<20000){\n        return [{payload:{programError:\"PIN-Bildschirm erkannt, Abkuehlzeit nach letztem Versuch aktiv\",loading:true,requestedChannel:requestedChannel0}},null,null,null,null];\n    }\n    flow.set(\"magentatvPinLastAttempt\",now);\n    flow.set(\"magentatvPinFailStreak\",failStreak+1);\n    const ip=msg.targetIp||flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\";\n    const keyCommandsFor=pin.split(\"\").map(d=>\"input keyevent KEYCODE_\"+d).join(\"; sleep 0.25; \");\n    const pinMsg={\n        requestedChannel:requestedChannel0,\n        targetIp:msg.targetIp,\n        scanGenerated:msg.scanGenerated===true,\n        infoStartedAt:msg.infoStartedAt,\n        infoAttempt:msg.infoAttempt,\n        payload:\"-s \"+ip+\":5555 shell \\\"\"+keyCommandsFor+\"; sleep 0.5; input keyevent KEYCODE_DPAD_CENTER; sleep 0.8; input keyevent KEYCODE_DPAD_CENTER\\\"\"\n    };\n    return [{payload:{programError:\"\",loading:true,status:\"PIN-Bildschirm erkannt, PIN wird automatisch eingegeben\"}},null,null,null,pinMsg];\n}\n\nconst errorScreenPattern=/Sender nicht abspielbar/i;\nif(errorScreenPattern.test(xml)){\n    const requestedChannel0=msg.requestedChannel||flow.get(\"lastRequestedChannel\")||\"\";\n    const ip=msg.targetIp||flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\";\n    return [\n        {payload:{programError:\"Fehler: 'Sender nicht abspielbar'. Zurück-Taste gesendet.\",loading:false,status:\"Nicht abspielbar\",requestedChannel:requestedChannel0,actualChannel:requestedChannel0}},\n        null,null,null,\n        {payload:\"-s \"+ip+\":5555 shell \\\"input keyevent KEYCODE_BACK\\\"\"}\n    ];\n}\n\nflow.set(\"magentatvPinFailStreak\",0);\n\nconst matches=[...xml.matchAll(/content-desc=\"(Kanal [^\"]+)\"/g)];\nif(!matches.length){\n    const startedAt=Number(msg.infoStartedAt)||Date.now();\n    const attempt=Number(msg.infoAttempt)||1;\n    const elapsed=Date.now()-startedAt;\n    const requestedChannel=msg.requestedChannel||flow.get(\"lastRequestedChannel\")||\"\";\n    const intervalMs=Math.max(8,Number(flow.get(\"magentatvScanInterval\"))||10)*1000;\n    const budgetMs=Math.min(8000,Math.max(2500,intervalMs-800));\n    if(elapsed<budgetMs&&attempt<4){\n        const retryMsg={topic:\"info-retry\",requestedChannel,targetIp:msg.targetIp,scanGenerated:msg.scanGenerated===true,payload:\"refresh\",infoStartedAt:startedAt,infoAttempt:attempt};\n        return [{payload:{programError:\"\",loading:true,status:\"Sendungsdaten werden erneut geprüft (Versuch \"+(attempt+1)+\")\"}},null,null,retryMsg,null];\n    }\n    return [{payload:{programError:\"Keine Sendungsdaten gefunden nach \"+attempt+\" Versuchen (\"+Math.round(elapsed/100)/10+\"s)\",loading:false,requestedChannel}},null,null,null,null];\n}\n\nconst raw=matches.map(x=>x[1]).sort((a,b)=>b.length-a.length)[0]\n    .replace(/&amp;/g,\"&\")\n    .replace(/&quot;/g,'\"')\n    .replace(/&#39;/g,\"'\");\nconst p=raw.split(',').map(x=>x.trim()).filter(Boolean);\nconst o={channel:null,station:p[1]||\"\",title:\"\",remaining_minutes:null,duration_minutes:null,season:null,episode:null,genre:\"\",quality:\"\",raw};\nlet m=(p[0]||\"\").match(/^Kanal\\s+(\\d+)/i);\nif(m)o.channel=+m[1];\nlet s=p.length;\nfor(let i=2;i<p.length;i++){\n    if(/^(Instant Restart|Noch\\s+\\d+\\s+Min\\.?|\\d+\\s+Min\\.?|S\\d+\\s+F\\d+|(High|Standard|Ultra-High)-Definition)$/i.test(p[i])){s=i;break;}\n}\no.title=p.slice(2,s).join(', ');\nfor(const v of p.slice(s)){\n    if((m=v.match(/^Noch\\s+(\\d+)\\s+Min/i)))o.remaining_minutes=+m[1];\n    else if((m=v.match(/^(\\d+)\\s+Min/i)))o.duration_minutes=+m[1];\n    else if((m=v.match(/^S(\\d+)\\s+F(\\d+)/i))){o.season=+m[1];o.episode=+m[2];}\n    else if(/Definition/i.test(v))o.quality=v;\n    else if(!/^Instant Restart$/i.test(v))o.genre=v;\n}\n\nconst requested=String(msg.requestedChannel||flow.get(\"lastRequestedChannel\")||\"\");\nconst actual=String(o.channel===null?\"\":o.channel);\nflow.set(\"activeChannel\",actual);\nlet directory=flow.get(\"magentatvDirectory\")||{};\nif(actual&&o.station){directory[actual]=o.station;flow.set(\"magentatvDirectory\",directory);const ts=flow.get(\"magentatvDirectoryTimestamps\")||{};ts[actual]=Date.now();flow.set(\"magentatvDirectoryTimestamps\",ts);}\nlet resultStatus;\nif(requested === \"CH+\") resultStatus=\"CH+ ausgeführt, Sender \" + actual + \" erkannt\";\nelse if(requested === \"CH-\") resultStatus=\"CH- ausgeführt, Sender \" + actual + \" erkannt\";\nelse if([\"BACK / EXIT\",\"HOME\",\"INFO\",\"TV\"].includes(requested)) resultStatus=requested + \" ausgeführt, Sender \" + actual + \" erkannt\";\nelse if(!requested) resultStatus=\"Sender nach CH-Taste erkannt\";\nelse if(Number(requested)===Number(actual)) resultStatus=\"Sender bestätigt\";\nelse resultStatus=\"Abweichender Sender angesteuert\";\nconst dashboardMsg={payload:{program:o,directory,requestedChannel:requested,actualChannel:actual,loading:false,status:resultStatus}};\nconst logMsg=msg.scanGenerated===true?{payload:{timestamp:new Date().toISOString(),requested_channel:requested,actual_channel:actual,...o}}:null;\nconst directoryMsg={filename:(flow.get(\"magentatvStorageServiceDir\")||((flow.get(\"magentatvSystem\")===\"development\"?\"/home/pi/project/zarpy/rec\":\"/mnt/rec\")+\"/services\"))+\"/magentatv_channel_directory.json\",payload:JSON.stringify({stations:directory},null,2)};\nreturn [dashboardMsg,logMsg,directoryMsg,null,null];",
+        "outputs": 5,
+        "x": 1550,
+        "y": 180,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ],
+            [
+                "91b627143e0fe478"
+            ],
+            [
+                "f14e402e6c85cfcf"
+            ],
+            [
+                "675c3381ef9903cc"
+            ],
+            [
+                "9a76773d034d1e07"
+            ]
+        ]
+    },
+    {
+        "id": "f14e402e6c85cfcf",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderverzeichnis speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 1900,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "fab69f8a2c9dbd69",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Automatik-Takt 1 Sekunde",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "topic": "tick",
+        "payload": "",
+        "payloadType": "str",
+        "x": 210,
+        "y": 300,
+        "wires": [
+            [
+                "63dbbd9a735e5cd0"
+            ]
+        ]
+    },
+    {
+        "id": "63dbbd9a735e5cd0",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Automatik Nummer, Liste und CH+ v1.2.3",
+        "func": "let run = context.get(\"run\") === true;\nlet automationType = context.get(\"automationType\") || \"off\";\nlet seq = Number(context.get(\"seq\") || 1);\nlet idx = Number(context.get(\"idx\") || 0);\nlet interval = Number(context.get(\"interval\") || 10);\nlet elapsed = Number(context.get(\"elapsed\") || 0);\nlet mode = context.get(\"mode\") || \"sequential\";\nlet list = Array.isArray(context.get(\"list\")) ? context.get(\"list\") : [];\nlet raw = String(context.get(\"raw\") || \"\");\nlet boxOffset = Number(context.get(\"boxOffset\") || 0);\nlet autostart = context.get(\"autostart\") === true;\n\nfunction maxOffset() {\n    return Math.max(0, Math.floor(list.length / 2));\n}\n\nfunction clampOffset(v) {\n    const m = maxOffset();\n    if (!m) return 0;\n    const n = Math.round(Number(v) || 0);\n    if (n <= 0) return 0;\n    return Math.min(n, m);\n}\nboxOffset = clampOffset(boxOffset);\n\nfunction normalizeList(values) {\n    return (Array.isArray(values) ? values : []).map(v => String(v).trim())\n        .filter(v => /^\\d{1,3}$/.test(v) && Number(v) >= 0 && Number(v) <= 999);\n}\n\nfunction saveState() {\n    boxOffset = clampOffset(boxOffset);\n    context.set(\"run\", run);\n    context.set(\"automationType\", automationType);\n    context.set(\"seq\", seq);\n    context.set(\"idx\", idx);\n    context.set(\"interval\", interval);\n    context.set(\"elapsed\", elapsed);\n    context.set(\"mode\", mode);\n    context.set(\"list\", list);\n    context.set(\"raw\", raw);\n    context.set(\"boxOffset\", boxOffset);\n    context.set(\"autostart\", autostart);\n\n    // NEU: Liste global bereitstellen für andere Flows/Module\n    global.set(\"magentatvChannelList\", list);\n    global.set(\"magentatvChannelListRaw\", raw);\n}\n\nfunction configFile() {\n    return {\n        filename: (flow.get(\"magentatvStorageServiceDir\") || ((flow.get(\"magentatvSystem\") === \"development\" ? \"/home/pi/project/zarpy/rec\" : \"/mnt/rec\") + \"/services\")) + \"/magentatv_automation_config.json\",\n        payload: JSON.stringify({ version: 1, saved_at: new Date().toISOString(), mode, boxOffset, interval, autostart }, null, 2)\n    };\n}\n\nfunction nextChannelB() {\n    if (!list.length || !boxOffset) return null;\n    return String(list[(idx + boxOffset) % list.length]);\n}\n\nfunction nextChannel() {\n    if (automationType === \"channel-up\") return \"CH+\";\n    if (automationType === \"list\" || mode === \"list\") return list.length ? String(list[idx % list.length]) : \"--\";\n    return String(seq).padStart(3, \"0\");\n}\n\nfunction ui(extra = {}) {\n    return {\n        payload: {\n            scanRunning: run,\n            automationType,\n            scanInterval: interval,\n            scanMode: mode,\n            autostartEnabled: autostart,\n            channelList: list,\n            channelListText: raw,\n            scanNext: nextChannel(),\n            boxOffset,\n            boxOffsetMax: maxOffset(),\n            scanNextB: nextChannelB(),\n            listMessage: list.length ? list.length + \" Sender gespeichert\" : \"Liste ist leer\",\n            ...extra\n        }\n    };\n}\n\nfunction actionMessage() {\n    elapsed = 0;\n    let output;\n    if (automationType === \"channel-up\") {\n        output = { topic: \"key\", payload: \"KEYCODE_CHANNEL_UP\", scanGenerated: true, automationGenerated: true };\n    } else if (automationType === \"list\") {\n        if (!list.length) return null;\n        const channel = String(list[idx % list.length]);\n        const channelB = boxOffset ? String(list[(idx + boxOffset) % list.length]) : channel;\n        idx = (idx + 1) % list.length;\n        output = { topic: \"channel\", payload: channel, channelB, scanGenerated: true, automationGenerated: true };\n    } else {\n        const channel = String(seq);\n        seq = seq >= 999 ? 1 : seq + 1;\n        output = { topic: \"channel\", payload: channel, scanGenerated: true, automationGenerated: true };\n    }\n    saveState();\n    return output;\n}\n\nfunction start(type, source = {}) {\n    automationType = type;\n    interval = Math.max(8, Math.min(3600, Math.round(Number(source.interval) || interval || 10)));\n    if (type === \"list\") {\n        if (Array.isArray(source.channels)) list = normalizeList(source.channels);\n        if (typeof source.rawText === \"string\") raw = source.rawText;\n        if (!list.length) {\n            run = false;\n            automationType = \"off\";\n            saveState();\n            return [null, ui({ status: \"Start nicht möglich: Senderliste ist leer\" }), null];\n        }\n        mode = \"list\";\n    } else {\n        mode = \"sequential\";\n    }\n    run = true;\n    elapsed = 0;\n    saveState();\n    const first = actionMessage();\n    const label = type === \"channel-up\" ? \"CH+ Scan gestartet\" : type === \"list\" ? \"Senderlistenscan gestartet\" : \"Nummernscan gestartet\";\n    return [first, ui({ loading: true, status: label }), null];\n}\n\nif (msg.topic === \"frontend-ready\") return [null, ui(), null];\n\nif (msg.topic === \"automation-start\") msg.topic = \"automation-start-list\";\nif (msg.topic === \"automation-stop\" || msg.topic === \"automation-stop-all\") { msg.topic = \"scan\"; msg.payload = \"stop\"; }\nif (msg.topic === \"automation-reset\") { msg.topic = \"scan\"; msg.payload = \"reset\"; }\n\nif (msg.topic === \"directory-import\") {\n    const directory = msg.payload && typeof msg.payload === \"object\" ? msg.payload : {};\n    flow.set(\"magentatvDirectory\", directory);\n    const file = {\n        filename: (flow.get(\"magentatvStorageServiceDir\") || ((flow.get(\"magentatvSystem\") === \"development\" ? \"/home/pi/project/zarpy/rec\" : \"/mnt/rec\") + \"/services\")) + \"/magentatv_channel_directory.json\",\n        payload: JSON.stringify({ version: 1, saved_at: new Date().toISOString(), stations: directory }, null, 2)\n    };\n    return [null, { payload: { directory, directoryMessage: Object.keys(directory).length + \" Sender aus JSON geladen und persistent gespeichert\" } }, file];\n}\n\nif (msg.topic === \"directory-load\") return [null, { payload: { directory: msg.payload || {} } }, null];\n\nif (msg.topic === \"scan-list-load\") {\n    const x = msg.payload || {};\n    list = normalizeList(x.channels);\n    raw = typeof x.rawText === \"string\" ? x.rawText : list.join(\"\\n\");\n    idx = 0;\n    saveState();\n    return [null, ui({ listMessage: list.length + \" Sender aus Datei geladen\" }), null];\n}\n\nif (msg.topic === \"scan-list\") {\n    const x = msg.payload || {};\n    const prevOffset = boxOffset;\n    list = normalizeList(x.channels);\n    raw = typeof x.rawText === \"string\" ? x.rawText : list.join(\"\\n\");\n    idx = 0;\n    saveState();\n    const offsetNote = (prevOffset && boxOffset !== prevOffset) ? \" · Box-B-Offset wegen kürzerer Liste auf \" + (boxOffset || \"aus\") + \" angepasst\" : \"\";\n    const file = {\n        filename: (flow.get(\"magentatvStorageServiceDir\") || ((flow.get(\"magentatvSystem\") === \"development\" ? \"/home/pi/project/zarpy/rec\" : \"/mnt/rec\") + \"/services\")) + \"/magentatv_channel_list.json\",\n        payload: JSON.stringify({ version: 2, saved_at: new Date().toISOString(), raw_text: raw, channels: list }, null, 2)\n    };\n    return [null, ui({ listMessage: list.length + \" Sender gespeichert\" + offsetNote }), file];\n}\n\nif (msg.topic === \"scan-mode\") {\n    if (msg.payload === \"list\" || msg.payload === \"sequential\") mode = msg.payload;\n    saveState();\n    return [null, ui(), configFile()];\n}\n\nif (msg.topic === \"list-offset\") {\n    const requested = Number(msg.payload);\n    const m = maxOffset();\n    boxOffset = clampOffset(requested);\n    saveState();\n    let msgTxt;\n    if (!m) msgTxt = \"Kein Offset möglich: Umschaltliste hat weniger als 2 Sender\";\n    else if (!boxOffset) msgTxt = \"Box-B-Offset deaktiviert\";\n    else if (requested > m) msgTxt = \"Box-B-Offset auf Maximum \" + boxOffset + \" begrenzt (halbe Listenlänge)\";\n    else msgTxt = \"Box-B-Offset auf \" + boxOffset + \" gesetzt\";\n    return [null, ui({ listMessage: msgTxt }), configFile()];\n}\n\nif (msg.topic === \"scan-interval\") {\n    interval = Math.max(8, Math.min(3600, Math.round(Number(msg.payload) || 10)));\n    elapsed = 0;\n    saveState();\n    return [null, ui(), configFile()];\n}\n\nif (msg.topic === \"autostart-config\") {\n    autostart = msg.payload === true;\n    saveState();\n    return [null, ui(), configFile()];\n}\n\nif (msg.topic === \"automation-config-load\") {\n    const x = msg.payload || {};\n    if (x.mode === \"list\" || x.mode === \"sequential\") mode = x.mode;\n    boxOffset = clampOffset(x.boxOffset);\n    const vInt = Number(x.interval);\n    if (vInt >= 8 && vInt <= 3600) interval = Math.round(vInt);\n    autostart = x.autostart === true;\n    saveState();\n    if (autostart && mode === \"list\" && list.length > 0) {\n        return start(\"list\", { interval, channels: list });\n    }\n    return [null, ui({ listMessage: \"Automatik-Einstellungen aus Datei wiederhergestellt\" }), null];\n}\n\nif (msg.topic === \"automation-start-number\") return start(\"number\", msg.payload || {});\nif (msg.topic === \"automation-start-channel-up\") return start(\"channel-up\", msg.payload || {});\nif (msg.topic === \"automation-start-list\") return start(\"list\", msg.payload || {});\nif (msg.topic === \"scan-start-config\") {\n    const x = msg.payload || {};\n    return start(x.mode === \"list\" ? \"list\" : \"number\", x);\n}\n\nif (msg.topic === \"scan\") {\n    if (msg.payload === \"stop\") {\n        run = false;\n        automationType = \"off\";\n        elapsed = 0;\n        saveState();\n        return [null, ui({ status: \"Alle Automatiken gestoppt\" }), null];\n    }\n    if (msg.payload === \"reset\") {\n        run = false;\n        automationType = \"off\";\n        seq = 1;\n        idx = 0;\n        elapsed = 0;\n        saveState();\n        return [null, ui({ status: \"Automatik zurückgesetzt\" }), null];\n    }\n}\n\nif (msg.topic !== \"tick\" || !run) return null;\nelapsed += 1;\n\nconst vcfg = flow.get('magentatvVideoCaptureConfig') || {};\nconst settle = vcfg.settle !== undefined ? Number(vcfg.settle) : 2;\nconst trailingBuffer = 1;\nconst totalCycle = interval + settle + trailingBuffer;\n\nif (elapsed < totalCycle) {\n    saveState();\n    return null;\n}\nreturn [actionMessage(), ui({ loading: true }), null];",
+        "outputs": 3,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 300,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ],
+            [
+                "2526f0fab4d45d47"
+            ],
+            [
+                "de7f916c4b499a04"
+            ]
+        ]
+    },
+    {
+        "id": "de7f916c4b499a04",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderliste mit Formatierung speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 830,
+        "y": 350,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "91b627143e0fe478",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "JSONL steuern",
+        "func": "if(msg.topic===\"record-control\"){const e=msg.payload===true;flow.set(\"magentatvRecordingEnabled\",e);const cfgFile={filename:(flow.get(\"magentatvStorageServiceDir\")||((flow.get(\"magentatvSystem\")===\"development\"?\"/home/pi/project/zarpy/rec\":\"/mnt/rec\")+\"/services\"))+\"/magentatv_recording_config.json\",payload:JSON.stringify({version:1,saved_at:new Date().toISOString(),recordingEnabled:e},null,2)};return[null,{payload:{recordingEnabled:e}},cfgFile];}const e=flow.get(\"magentatvRecordingEnabled\")===true;return[e?{filename:(flow.get(\"magentatvStorageServiceDir\")||((flow.get(\"magentatvSystem\")===\"development\"?\"/home/pi/project/zarpy/rec\":\"/mnt/rec\")+\"/services\"))+\"/magentatv_scan_program_info.jsonl\",payload:JSON.stringify(msg.payload)+\"\\n\"}:null,{payload:{recordingEnabled:e}},null];",
+        "outputs": 3,
+        "x": 1640,
+        "y": 250,
+        "wires": [
+            [
+                "2152b51b7ca4e1d4"
+            ],
+            [
+                "2526f0fab4d45d47"
+            ],
+            [
+                "05a1c0e23c777d86"
+            ]
+        ]
+    },
+    {
+        "id": "2152b51b7ca4e1d4",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "JSONL speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 1890,
+        "y": 250,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0d5f957eaad01c60",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Persistente JSON-Daten vollständig laden",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1.5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 160,
+        "y": 420,
+        "wires": [
+            [
+                "40e3cf661c05b333",
+                "388830be86d760f6",
+                "b2a17dd42b587081"
+            ]
+        ]
+    },
+    {
+        "id": "5d8b46c6818e584b",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderliste samt Formatierung laden",
+        "func": "try {\n    const data=JSON.parse(String(msg.payload||\"\"));\n    const channels=Array.isArray(data)?data:(Array.isArray(data.channels)?data.channels:[]);\n    const raw=typeof data.raw_text===\"string\"?data.raw_text:(typeof data.rawText===\"string\"?data.rawText:channels.join(\"\\n\"));\n    msg.topic=\"scan-list-load\";\n    msg.payload={channels,rawText:raw};\n    return msg;\n} catch(e) {\n    node.warn(\"Senderliste konnte beim Start nicht geladen werden: \"+e.message);\n    return null;\n}",
+        "outputs": 1,
+        "x": 830,
+        "y": 400,
+        "wires": [
+            [
+                "63dbbd9a735e5cd0"
+            ]
+        ]
+    },
+    {
+        "id": "8e54f1b635a22af3",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderverzeichnis auswerten",
+        "func": "try {\n    const data=JSON.parse(String(msg.payload||\"\"));\n    const stations=data&&typeof data.stations===\"object\"&&!Array.isArray(data.stations)?data.stations:data;\n    if(!stations||typeof stations!==\"object\"||Array.isArray(stations))throw new Error(\"Ungültiges Senderverzeichnis\");\n    flow.set(\"magentatvDirectory\",stations);\n    msg.topic=\"directory-load\";\n    msg.payload=stations;\n    return msg;\n} catch(e) {\n    node.warn(\"Gesamtsenderliste konnte beim Start nicht geladen werden: \"+e.message);\n    return null;\n}",
+        "outputs": 1,
+        "x": 800,
+        "y": 440,
+        "wires": [
+            [
+                "63dbbd9a735e5cd0"
+            ]
+        ]
+    },
+    {
+        "id": "d80e9dca82f3181b",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Startstatus an Dashboard",
+        "func": "msg.payload={\n    targetIpA:flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\",\n    targetIpB:flow.get(\"magentatvTargetIpB\")||\"192.168.2.42\",\n    boxAEnabled: flow.get(\"magentatvBoxAEnabled\")===undefined ? true : flow.get(\"magentatvBoxAEnabled\")===true,\n    boxBEnabled: flow.get(\"magentatvBoxBEnabled\")===true,\n    scanMode: flow.get(\"magentatvScanMode\")||\"sequential\",\n    recordingEnabled:flow.get(\"magentatvRecordingEnabled\")===true,\n    directory:flow.get(\"magentatvDirectory\")||{},\n    directoryMessage:\"Persistente Einstellungen beim Programmstart wiederhergestellt\"\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 490,
+        "y": 490,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "cab6c4906ba13350",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "ADB Diagnose",
+        "active": false,
+        "tosidebar": true,
+        "complete": "true",
+        "targetType": "full",
+        "x": 1440,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "48320986d41ec579",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Info-Kommando mit OK - bewaehrt",
+        "func": "const ip=msg.targetIp||flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\";\nmsg.requestedChannel=msg.requestedChannel||flow.get(\"lastRequestedChannel\")||\"\";\nmsg.payload=\"-s \"+ip+\":5555 shell \\\"input keyevent KEYCODE_DPAD_CENTER; sleep 1.2; uiautomator dump /sdcard/window.xml >/dev/null; cat /sdcard/window.xml\\\"\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 280,
+        "wires": [
+            [
+                "1916dbf6a5d7c708"
+            ]
+        ]
+    },
+    {
+        "id": "cb7634873ecdbab5",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Excel-Export vorbereiten",
+        "func": "const mode=[\"directory\",\"control\",\"both\"].includes(String(msg.payload))?String(msg.payload):\"both\";msg.payload=\"/home/pi/project/magenta/magentatv_excel_export.py \"+mode;return msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 680,
+        "wires": [
+            [
+                "5fb64e746b488e24"
+            ]
+        ]
+    },
+    {
+        "id": "5fb64e746b488e24",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "python3",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "30",
+        "winHide": true,
+        "oldrc": false,
+        "name": "Excel-Datei erzeugen",
+        "x": 1280,
+        "y": 340,
+        "wires": [
+            [
+                "3d23ab4a4d2b16c2"
+            ],
+            [
+                "51990ed8ac363420"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "3d23ab4a4d2b16c2",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Excel-Export Ergebnis",
+        "func": "try{const r=JSON.parse(String(msg.payload||\"{}\"));msg.payload={exportMessage:r.ok?\"Excel gespeichert: \"+r.file:\"Excel-Export fehlgeschlagen: \"+(r.error||\"unbekannter Fehler\")};}catch(e){msg.payload={exportMessage:\"Excel-Export: \"+String(msg.payload||\"keine Rückmeldung\")};}return msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1320,
+        "y": 580,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "51990ed8ac363420",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Excel-Export Fehler",
+        "func": "msg.payload={exportMessage:\"Excel-Export fehlgeschlagen: \"+String(msg.payload||\"Python/openpyxl prüfen\")};return msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1690,
+        "y": 400,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "fa5636a66427b2a1",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Automatik Steuerbefehle",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 520,
+        "y": 345,
+        "wires": []
+    },
+    {
+        "id": "e6d7883050568432",
+        "type": "comment",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Pfad 2: Sendungsinfo über 2,5 s Delay, OK, UI-Dump",
+        "info": "Dieser Pfad darf nicht mit der Automatik verbunden werden.",
+        "x": 1250,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "034cd50c4d3e4a0d",
+        "type": "comment",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Pfad 3: Start, Stop, Reset und Scan-Takt",
+        "info": "Dieser Pfad ist ausschließlich für die Automatiksteuerung.",
+        "x": 520,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "1b8ec0db325a4f9d",
+        "type": "link in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "EXT Start CH+ Scan",
+        "links": [],
+        "x": 185,
+        "y": 610,
+        "wires": [
+            [
+                "707a87bad175b081"
+            ]
+        ]
+    },
+    {
+        "id": "707a87bad175b081",
+        "type": "change",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Befehl CH+ Scan",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "automation-start-channel-up",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 420,
+        "y": 610,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "d6a6dbef4bea21e9",
+        "type": "link in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "EXT Start Senderlistenscan",
+        "links": [],
+        "x": 185,
+        "y": 655,
+        "wires": [
+            [
+                "3225ff28a3fcfb45"
+            ]
+        ]
+    },
+    {
+        "id": "3225ff28a3fcfb45",
+        "type": "change",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Befehl Senderlistenscan",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "automation-start-list",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 440,
+        "y": 655,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "9856398b13b12528",
+        "type": "link in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "EXT Stop alle Automatiken",
+        "links": [],
+        "x": 185,
+        "y": 700,
+        "wires": [
+            [
+                "79ac42a0ea19eea4"
+            ]
+        ]
+    },
+    {
+        "id": "79ac42a0ea19eea4",
+        "type": "change",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Befehl Stop alle",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "automation-stop-all",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 410,
+        "y": 700,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "03ad664579d3b662",
+        "type": "comment",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Externe Timer über Link-Out mit diesen drei Link-In-Nodes verbinden",
+        "info": "CH+ Start nutzt msg.payload.interval optional. List Start nutzt die persistent geladene Liste. Stop beendet Nummernscan, Senderlistenscan und CH+ Scan.",
+        "x": 390,
+        "y": 565,
+        "wires": []
+    },
+    {
+        "id": "3fde127cdb6219fc",
+        "type": "link in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "EXT Sendernummer direkt ansteuern",
+        "links": [],
+        "x": 185,
+        "y": 750,
+        "wires": [
+            [
+                "c006445ac0c2cb27"
+            ]
+        ]
+    },
+    {
+        "id": "c006445ac0c2cb27",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Externe Sendernummer prüfen",
+        "func": "const value=(msg.payload&&typeof msg.payload===\"object\")?msg.payload.channel:msg.payload;const channel=String(value??\"\").trim();if(!/^\\d{1,3}$/.test(channel)||Number(channel)>999){node.warn(\"Ungültige externe Sendernummer: \"+channel);return null;}msg.topic=\"channel\";msg.payload=channel;msg.externalCommand=true;return msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 750,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "1504d5e376d4e71e",
+        "type": "comment",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Extern: msg.payload = 12 oder { channel: 12 }",
+        "info": "Über einen Link-Out hierher senden. Die direkte Senderwahl startet auch den stabilen Sendungsinfo-Pfad.",
+        "x": 400,
+        "y": 790,
+        "wires": []
+    },
+    {
+        "id": "b2a17dd42b587081",
+        "type": "delay",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Startstatus nach JSON-Laden",
+        "pauseType": "delay",
+        "timeout": "1.2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 490,
+        "y": 520,
+        "wires": [
+            [
+                "d80e9dca82f3181b"
+            ]
+        ]
+    },
+    {
+        "id": "fed1385913c0cff4",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "ADB-Befehle auf Boxen aufteilen",
+        "func": "const list = Array.isArray(msg.payload) ? msg.payload : [msg.payload];\nfor (const p of list) node.send({...msg, payload: p});\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 40,
+        "wires": [
+            [
+                "475f7c7b563d2361"
+            ]
+        ]
+    },
+    {
+        "id": "773466a4fa912b63",
+        "type": "comment",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Excel Export",
+        "info": "",
+        "x": 1230,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "05a1c0e23c777d86",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufzeichnungs-Konfiguration speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 1640,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "388830be86d760f6",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Systemauswahl laden",
+        "filename": "/home/pi/.config/magentatv_remote_system.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 230,
+        "y": 520,
+        "wires": [
+            [
+                "24f272117d6128b3"
+            ]
+        ]
+    },
+    {
+        "id": "24f272117d6128b3",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Systemauswahl auswerten",
+        "func": "try{msg.topic='system-load';msg.payload=JSON.parse(String(msg.payload||''));return msg}catch(e){return null}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 620,
+        "wires": [
+            [
+                "2b0f40c617fb4d9e"
+            ]
+        ]
+    },
+    {
+        "id": "2b0f40c617fb4d9e",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Systempfade sofort setzen",
+        "func": "const map={production:{base:'/mnt/rec',script:'/home/pi/project/magenta/magentatv_capture.py',label:'Produktion'},development:{base:'/home/pi/project/zarpy/rec',script:'/home/pi/project/zarpy/magentatv_capture.py',label:'Entwicklung'}};let system=flow.get('magentatvSystem')||'production';function setSystem(s){if(!map[s])s='production';system=s;const c=map[s],g=(Number(flow.get('magentatvSystemGeneration'))||0)+1;flow.set('magentatvSystem',s);flow.set('magentatvStorageBase',c.base);flow.set('magentatvStorageServiceDir',c.base+'/services');flow.set('magentatvRecordingRoot',c.base+'/magentatv');flow.set('magentatvCaptureScript',c.script);flow.set('magentatvSystemGeneration',g);return{c,g}}function ui(extra={}){const c=map[system]||map.production;return{payload:{system,systemLabel:c.label,storageBase:c.base,storageServiceDir:c.base+'/services',storageRecordingRoot:c.base+'/magentatv',captureScript:c.script,systemGeneration:flow.get('magentatvSystemGeneration'),retentionWeeks:flow.get('magentatvRetentionWeeks')||4,...extra}}}if(msg.topic==='system-load'){const r=setSystem((msg.payload||{}).system);return[ui({systemMessage:'System aktiv: '+r.c.label}),null,{topic:'load-current-system'}]}if(msg.topic==='frontend-ready'){return[ui(),null,null]}if(msg.topic==='system-set'){const r=setSystem(msg.payload);return[ui({systemMessage:'System sofort umgestellt: '+r.c.label}),{filename:'/home/pi/.config/magentatv_remote_system.json',payload:JSON.stringify({version:3,saved_at:new Date().toISOString(),system},null,2)},{topic:'load-current-system'}]}if(msg.topic==='retention-load'){let weeks=(msg.payload&&msg.payload.retentionWeeks)?Number(msg.payload.retentionWeeks):4;flow.set('magentatvRetentionWeeks',weeks);return[ui({retentionMessage:'Aufbewahrungsdauer geladen'}),null,null]}if(msg.topic==='retention-save'){let weeks=Math.max(1,Math.min(52,Number(msg.payload)||4));flow.set('magentatvRetentionWeeks',weeks);const p=flow.get('magentatvStorageServiceDir')||'/mnt/rec/services';return[ui({retentionMessage:'Gespeichert: '+weeks+' Wochen'}),{filename:p+'/magentatv_retention_config.json',payload:JSON.stringify({version:1,saved_at:new Date().toISOString(),retentionWeeks:weeks},null,2)},null]}return null;",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 560,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ],
+            [
+                "3a42785f4a16e6bb"
+            ],
+            [
+                "aa3cce5f1d921b13"
+            ]
+        ]
+    },
+    {
+        "id": "3a42785f4a16e6bb",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Systemauswahl speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 990,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e3046d1e3ffbb082",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Videoaufnahme sofort synchronisieren",
+        "func": "const d={settle:2,a:{enabled:true,video:'/dev/video0',audio:'plughw:CARD=U25773,DEV=0'},b:{enabled:true,video:'/dev/video2',audio:'plughw:3,0'}};\nlet c=flow.get('magentatvVideoCaptureConfig')||d;\nc={...d,...c,a:{...d.a,...(c.a||{})},b:{...d.b,...(c.b||{})}};\nfunction paths(){return{base:flow.get('magentatvStorageBase'),service:flow.get('magentatvStorageServiceDir'),root:flow.get('magentatvRecordingRoot'),script:flow.get('magentatvCaptureScript')}}\nfunction state(x={}){const p=paths();return{payload:{videoCapture:c,storageBase:p.base,storageServiceDir:p.service,storageRecordingRoot:p.root,captureScript:p.script,...x}}}\nfunction save(msg){const p=paths();return{filename:p.service+'/magentatv_video_capture_config.json',payload:JSON.stringify({version:6,saved_at:new Date().toISOString(),...c},null,2)}}\nif(msg.topic==='video-capture-load'){const x=msg.payload||{};c={...d,...x,a:{...d.a,...(x.a||{})},b:{...d.b,...(x.b||{})}};flow.set('magentatvVideoCaptureConfig',c);return[state({videoCaptureMessage:'Videoeinstellungen geladen'}),null,null]}\nif(msg.topic==='frontend-ready'){return[state(),null,null]}\nif(msg.topic==='box-b-enabled'&&msg.payload!==true){c.b.enabled=false;flow.set('magentatvVideoCaptureConfig',c);return[state({videoCaptureMessage:'Videoaufnahme Box B deaktiviert, weil Box B deaktiviert ist'}),save(),null]}\nif(msg.topic==='box-a-enabled'&&msg.payload!==true){c.a.enabled=false;flow.set('magentatvVideoCaptureConfig',c);return[state({videoCaptureMessage:'Videoaufnahme Box A deaktiviert, weil Box A deaktiviert ist'}),save(),null]}\nif(msg.topic==='video-capture-save'){const x=msg.payload||{},a=x.a||{},b=x.b||{};const bActive=flow.get('magentatvBoxBEnabled')===true,aActive=flow.get('magentatvBoxAEnabled')!==false;c={settle:Math.max(0,Math.min(5,Number(x.settle)||2)),a:{enabled:a.enabled!==false&&aActive,video:String(a.video||''),audio:String(a.audio||'')},b:{enabled:b.enabled!==false&&bActive,video:String(b.video||''),audio:String(b.audio||'')}};flow.set('magentatvVideoCaptureConfig',c);return[state({videoCaptureMessage:'Videoeinstellungen gespeichert'}),save(),null]}\nif(msg.topic!=='video-capture-start')return null;\n\nconst x=msg.payload||{},dir=flow.get('magentatvDirectory')||{},aActive=flow.get('magentatvBoxAEnabled')!==false,bActive=flow.get('magentatvBoxBEnabled')===true,g=flow.get('magentatvSystemGeneration'),tasks=[],skip=[];\n\n// Dauer entspricht exakt der Einstellung im Dashboard\nconst videoDuration=Math.max(8,Number(x.scanInterval)||Number(flow.get('magentatvScanInterval'))||10);\n\nfor(const box of ['a','b']){\n    const q=c[box],active=box==='a'?aActive:bActive;\n    if(!q.enabled||!active){skip.push('Box '+box.toUpperCase()+' deaktiviert');continue}\n    if(flow.get('magentatvCaptureBusy_'+box)===true){skip.push('Box '+box.toUpperCase()+' überspringt: vorherige Aufnahme läuft noch');continue}\n    const ch=box==='b'?(x.channelB||x.channel):x.channel;\n    if(!/^\\d{1,3}$/.test(String(ch||'')))continue;\n    \n    // FIX: Kein \"_u\" mehr. Wenn in Liste bekannt -> Name, sonst -> \"Unbekannt\"\n    const knownName=dir[String(ch)];\n    const station=knownName ? knownName : 'Unbekannt';\n    \n    tasks.push({box,channel:String(ch),station,videoDevice:q.video,audioDevice:q.audio,settle:c.settle,duration:videoDuration,systemGeneration:g})\n}\nreturn[state({videoCaptureMessage:tasks.length?tasks.length+' Videoaufnahme(n) vorbereitet'+(skip.length?' · '+skip.join(', '):''):'Keine Videoaufnahme: '+skip.join(', ')}),null,tasks.length?{payload:tasks}:null];",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1470,
+        "y": 1000,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ],
+            [
+                "3e0c47d2e935722c"
+            ],
+            [
+                "131472b12976608e"
+            ]
+        ]
+    },
+    {
+        "id": "3e0c47d2e935722c",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Videoeinstellungen speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 1400,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "40e3cf661c05b333",
+        "type": "change",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Standard-System sofort auslösen",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "system-load",
+                "tot": "str"
+            },
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{}",
+                "tot": "json"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 550,
+        "y": 400,
+        "wires": [
+            [
+                "2b0f40c617fb4d9e"
+            ]
+        ]
+    },
+    {
+        "id": "aa3cce5f1d921b13",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Ladeaufträge für aktuelles System vorbereiten",
+        "func": "const s = flow.get('magentatvStorageServiceDir') || ((flow.get('magentatvSystem')==='development'?'/home/pi/project/zarpy/rec':'/mnt/rec')+'/services');\nconst mk = (name) => ({ filename: s + '/' + name });\nreturn [\n    mk('magentatv_channel_list.json'),\n    mk('magentatv_channel_directory.json'),\n    mk('magentatv_recording_config.json'),\n    mk('magentatv_video_capture_config.json'),\n    mk('magentatv_ip_config.json'),\n    mk('magentatv_pin_config.json'),\n    mk('magentatv_automation_config.json'),\n    mk('magentatv_retention_config.json'),\n    {payload:{storageBase:flow.get('magentatvStorageBase'),storageServiceDir:s,storageRecordingRoot:flow.get('magentatvRecordingRoot'),captureScript:flow.get('magentatvCaptureScript')}}\n];",
+        "outputs": 9,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 860,
+        "wires": [
+            [
+                "cfb12ca4fd8fcfa3"
+            ],
+            [
+                "59f0268892ef89bf"
+            ],
+            [
+                "10cfd0774fccecd5"
+            ],
+            [
+                "d60c224bc0d7e5a8"
+            ],
+            [
+                "dd9de9ae6d43f6dd"
+            ],
+            [
+                "04caa925d9124893"
+            ],
+            [
+                "6ffd96f69c6bec7b"
+            ],
+            [
+                "de3d26e3771d532e"
+            ],
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "cfb12ca4fd8fcfa3",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderliste laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 970,
+        "y": 780,
+        "wires": [
+            [
+                "3bf4d20fa4b341c6"
+            ]
+        ]
+    },
+    {
+        "id": "3bf4d20fa4b341c6",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderliste auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));const channels=Array.isArray(d.channels)?d.channels:[];return {topic:'scan-list-load',payload:{channels,rawText:typeof d.raw_text==='string'?d.raw_text:channels.join('\\n')}};}catch(e){return {topic:'scan-list-load',payload:{channels:[],rawText:''}};}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1320,
+        "y": 440,
+        "wires": [
+            [
+                "63dbbd9a735e5cd0"
+            ]
+        ]
+    },
+    {
+        "id": "59f0268892ef89bf",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderverzeichnis laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 990,
+        "y": 820,
+        "wires": [
+            [
+                "aa545f4348cdf5f6"
+            ]
+        ]
+    },
+    {
+        "id": "aa545f4348cdf5f6",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Senderverzeichnis auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));const stations=d.stations&&typeof d.stations==='object'?d.stations:{};flow.set('magentatvDirectory',stations);return {topic:'directory-load',payload:stations};}catch(e){return {topic:'directory-load',payload:{}};}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1350,
+        "y": 480,
+        "wires": [
+            [
+                "63dbbd9a735e5cd0"
+            ]
+        ]
+    },
+    {
+        "id": "10cfd0774fccecd5",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufzeichnungs-Konfiguration laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 1010,
+        "y": 860,
+        "wires": [
+            [
+                "424e36f57db0e0f3"
+            ]
+        ]
+    },
+    {
+        "id": "424e36f57db0e0f3",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufzeichnungs-Konfiguration auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));const enabled=d.recordingEnabled===true;flow.set('magentatvRecordingEnabled',enabled);return {payload:{recordingEnabled:enabled}};}catch(e){return null;}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1360,
+        "y": 520,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "d60c224bc0d7e5a8",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Videoaufnahme-Konfiguration laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 1020,
+        "y": 900,
+        "wires": [
+            [
+                "7d4bbf4901c9409a"
+            ]
+        ]
+    },
+    {
+        "id": "7d4bbf4901c9409a",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Videoaufnahme-Konfiguration auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));return {topic:'video-capture-load',payload:d};}catch(e){return {topic:'video-capture-load',payload:{}};}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1380,
+        "y": 640,
+        "wires": [
+            [
+                "e3046d1e3ffbb082"
+            ]
+        ]
+    },
+    {
+        "id": "dd9de9ae6d43f6dd",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "IP-/Box-Konfiguration laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 990,
+        "y": 940,
+        "wires": [
+            [
+                "7546fb126f6e7dfe"
+            ]
+        ]
+    },
+    {
+        "id": "7546fb126f6e7dfe",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "IP-/Box-Konfiguration auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));const validIp=v=>{const p=String(v||'').trim().split('.');return p.length===4&&p.every(x=>/^\\d{1,3}$/.test(x)&&Number(x)<=255)};const a=validIp(d.targetIpA)?d.targetIpA:null;const b=validIp(d.targetIpB)?d.targetIpB:null;if(a){flow.set('magentatvTargetIpA',a);flow.set('magentatvTargetIp',a);}if(b)flow.set('magentatvTargetIpB',b);const boxA=typeof d.boxAEnabled==='boolean'?d.boxAEnabled:undefined;const boxB=typeof d.boxBEnabled==='boolean'?d.boxBEnabled:undefined;if(boxA!==undefined)flow.set('magentatvBoxAEnabled',boxA);if(boxB!==undefined)flow.set('magentatvBoxBEnabled',boxB);return {payload:{targetIpA:a,targetIpB:b,boxAEnabled:boxA,boxBEnabled:boxB}};}catch(e){return null;}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1370,
+        "y": 780,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "04caa925d9124893",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "PIN-Konfiguration laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 990,
+        "y": 980,
+        "wires": [
+            [
+                "583dc6d3dd1de4eb"
+            ]
+        ]
+    },
+    {
+        "id": "583dc6d3dd1de4eb",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "PIN-Konfiguration auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));const pin=/^\\d{4,8}$/.test(String(d.pin||''))?String(d.pin):'';if(pin)flow.set('magentatvPin',pin);return {payload:{pinConfigured:!!pin}};}catch(e){return null;}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1380,
+        "y": 820,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "6ffd96f69c6bec7b",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Automatik-Konfiguration laden (dynamisch)",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 990,
+        "y": 1020,
+        "wires": [
+            [
+                "b81fe5214fdfeb66"
+            ]
+        ]
+    },
+    {
+        "id": "b81fe5214fdfeb66",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Automatik-Konfiguration auswerten",
+        "func": "try{const d=JSON.parse(String(msg.payload||''));return {topic:'automation-config-load',payload:{mode:d.mode,boxOffset:Number(d.boxOffset)||0,interval:Number(d.interval)||10,autostart:d.autostart===true}};}catch(e){return null;}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1400,
+        "y": 860,
+        "wires": [
+            [
+                "63dbbd9a735e5cd0"
+            ]
+        ]
+    },
+    {
+        "id": "de3d26e3771d532e",
+        "type": "file in",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufbewahrungs-Konfiguration laden",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 990,
+        "y": 1060,
+        "wires": [
+            [
+                "d35549edadcac7b6"
+            ]
+        ]
+    },
+    {
+        "id": "d35549edadcac7b6",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufbewahrungs-Konfiguration auswerten",
+        "func": "try{\n    const d=JSON.parse(String(msg.payload||''));\n    return {topic:'retention-load',payload:d};\n}catch(e){\n    return {topic:'retention-load',payload:{}};\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1400,
+        "y": 900,
+        "wires": [
+            [
+                "2b0f40c617fb4d9e"
+            ]
+        ]
+    },
+    {
+        "id": "98d5e00da1bde530",
+        "type": "file",
+        "z": "f26b92fccfb2c7cb",
+        "name": "IP-/Box-/PIN-Konfiguration speichern",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 910,
+        "y": 60,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a29837def57383e9",
+        "type": "comment",
+        "z": "f26b92fccfb2c7cb",
+        "name": "TV-Taste alle 10 Minuten an beide konfigurierte Boxen",
+        "info": "KEYCODE_TV wird alle 600 Sekunden unabhängig von Aktivierungshaken und Scan-Modus an Box A und Box B gesendet.",
+        "x": 300,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "eabc2e64f606b7a5",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "TV-Taste alle 10 Minuten an alle Boxen",
+        "props": [
+            {
+                "p": "payload",
+                "v": "KEYCODE_TV",
+                "vt": "str"
+            },
+            {
+                "p": "topic",
+                "v": "key-all-boxes",
+                "vt": "str"
+            }
+        ],
+        "repeat": "600",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "key-all-boxes",
+        "payload": "KEYCODE_TV",
+        "payloadType": "str",
+        "x": 260,
+        "y": 950,
+        "wires": [
+            [
+                "a1d85f1acf6db2a9"
+            ]
+        ]
+    },
+    {
+        "id": "675c3381ef9903cc",
+        "type": "delay",
+        "z": "f26b92fccfb2c7cb",
+        "name": "0,5 Sekunden bis Wiederholung",
+        "pauseType": "delay",
+        "timeout": "0.5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1770,
+        "y": 220,
+        "wires": [
+            [
+                "1346f3c552c10eb4"
+            ]
+        ]
+    },
+    {
+        "id": "1346f3c552c10eb4",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Nur erneut dumpen (ohne OK/Sleep)",
+        "func": "const ip=msg.targetIp||flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\";\nmsg.payload=\"-s \"+ip+\":5555 shell \\\"uiautomator dump /sdcard/window.xml >/dev/null; cat /sdcard/window.xml\\\"\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1990,
+        "y": 220,
+        "wires": [
+            [
+                "432bcc1bb56242b4"
+            ]
+        ]
+    },
+    {
+        "id": "432bcc1bb56242b4",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "adb",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "2",
+        "winHide": true,
+        "oldrc": false,
+        "name": "UI-Dump erneut lesen (schlank)",
+        "x": 2270,
+        "y": 320,
+        "wires": [
+            [
+                "f571d3d7f476c187"
+            ],
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "9a76773d034d1e07",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "adb",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "5",
+        "winHide": true,
+        "oldrc": false,
+        "name": "PIN oder Fehler Tasten",
+        "x": 1780,
+        "y": 160,
+        "wires": [
+            [
+                "3c452ea321b1bfad"
+            ],
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "3c452ea321b1bfad",
+        "type": "delay",
+        "z": "f26b92fccfb2c7cb",
+        "name": "1 Sekunde nach PIN warten",
+        "pauseType": "delay",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2010,
+        "y": 160,
+        "wires": [
+            [
+                "cbc2671eb2c84a6c"
+            ]
+        ]
+    },
+    {
+        "id": "cbc2671eb2c84a6c",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Nach PIN erneut dumpen",
+        "func": "const ip=msg.targetIp||flow.get(\"magentatvTargetIpA\")||flow.get(\"magentatvTargetIp\")||\"192.168.2.41\";\nmsg.payload=\"-s \"+ip+\":5555 shell \\\"uiautomator dump /sdcard/window.xml >/dev/null; cat /sdcard/window.xml\\\"\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2240,
+        "y": 160,
+        "wires": [
+            [
+                "b3b1a9d481422dc3"
+            ]
+        ]
+    },
+    {
+        "id": "b3b1a9d481422dc3",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "adb",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "3",
+        "winHide": true,
+        "oldrc": false,
+        "name": "UI-Dump nach PIN lesen",
+        "x": 2490,
+        "y": 160,
+        "wires": [
+            [
+                "f571d3d7f476c187"
+            ],
+            [
+                "cab6c4906ba13350"
+            ],
+            [
+                "cab6c4906ba13350"
+            ]
+        ]
+    },
+    {
+        "id": "131472b12976608e",
+        "type": "split",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufnahmeaufträge Box A und B aufteilen",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "property": "payload",
+        "x": 1440,
+        "y": 1120,
+        "wires": [
+            [
+                "9844716552377cc6"
+            ]
+        ]
+    },
+    {
+        "id": "9844716552377cc6",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufnahme-Wartezeit setzen",
+        "func": "const x=msg.payload||{};msg.delay=Math.max(0,Math.min(5,Number(x.settle)||1))*1000;return msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1760,
+        "y": 1120,
+        "wires": [
+            [
+                "0b17d7dab5ee5053"
+            ]
+        ]
+    },
+    {
+        "id": "0b17d7dab5ee5053",
+        "type": "delay",
+        "z": "f26b92fccfb2c7cb",
+        "name": "HDMI-Signal stabilisieren",
+        "pauseType": "delayv",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2030,
+        "y": 1120,
+        "wires": [
+            [
+                "34e8a5d30484b095"
+            ]
+        ]
+    },
+    {
+        "id": "34e8a5d30484b095",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Python-Recording-Aufruf erstellen",
+        "func": "const x=msg.payload||{};\nif(x.systemGeneration!==flow.get('magentatvSystemGeneration')){node.status({fill:'yellow',shape:'ring',text:'alter Auftrag verworfen'});return null;}\nif(flow.get('magentatvCaptureBusy_'+x.box)===true){node.status({fill:'yellow',shape:'ring',text:'Box '+x.box.toUpperCase()+' noch belegt'});return null;}\nconst system=flow.get('magentatvSystem')==='development'?'development':'production';\nconst base=system==='development'?'/home/pi/project/zarpy/rec':'/mnt/rec';\nconst script=system==='development'?'/home/pi/project/zarpy/magentatv_capture.py':'/home/pi/project/magenta/magentatv_capture.py';\nconst root=base+'/magentatv',service=base+'/services';\nconst duration=Math.max(3,Math.min(3600,Math.round(Number(x.duration)||10)));\nconst q=v=>\"'\"+String(v).replace(/'/g,\"'\\\\''\")+\"'\";\nmsg.payload='/usr/bin/python3 '+q(script)+' capture --box '+q(x.box)+' --video-device '+q(x.videoDevice)+' --audio-device '+q(x.audioDevice)+' --recording-root '+q(root)+' --service-dir '+q(service)+' --channel '+q(x.channel)+' --station '+q(x.station)+' --duration '+q(duration);\nmsg.recordingCommand=msg.payload;\nmsg.box=x.box;\nmsg.recordingPaths={system,base,root,service,script,duration};\nconst busyKey='magentatvCaptureBusy_'+x.box;\nflow.set(busyKey,true);\nsetTimeout(()=>{ if(flow.get(busyKey)===true) flow.set(busyKey,false); },(duration+15)*1000);\nnode.status({fill:'green',shape:'dot',text:system+' · '+x.box.toUpperCase()+' · '+duration+'s'});\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2020,
+        "y": 700,
+        "wires": [
+            [
+                "7ea61cf083ebd012",
+                "2f016de7f57fc509"
+            ]
+        ]
+    },
+    {
+        "id": "7ea61cf083ebd012",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "DEBUG Python-Recording-Befehl",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "recordingCommand",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2330,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "2f016de7f57fc509",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "0",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Python-Recording-Modul ausführen",
+        "x": 2340,
+        "y": 720,
+        "wires": [
+            [
+                "db7e7b37add3dbb3",
+                "6821ca44f57fe8ff"
+            ],
+            [
+                "fd67253fb7875424"
+            ],
+            [
+                "f3264659127430b8"
+            ]
+        ]
+    },
+    {
+        "id": "db7e7b37add3dbb3",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Aufnahme-Ergebnis im Dashboard",
+        "func": "try{const x=JSON.parse(String(msg.payload||''));msg.payload={videoCaptureMessage:x.ok?'Aufnahme gespeichert: '+x.file:'Aufnahmefehler: '+(x.error||x.stderr||'unbekannt')};return msg}catch(e){msg.payload={videoCaptureMessage:'Python-Antwort: '+String(msg.payload||'').slice(0,180)};return msg}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2680,
+        "y": 700,
+        "wires": [
+            [
+                "2526f0fab4d45d47"
+            ]
+        ]
+    },
+    {
+        "id": "6821ca44f57fe8ff",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "DEBUG Python-Recording stdout",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2680,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "fd67253fb7875424",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "DEBUG Python-Recording stderr",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2700,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "f3264659127430b8",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Belegungssperre freigeben",
+        "func": "const box=msg.box;if(box)flow.set('magentatvCaptureBusy_'+box,false);return msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2680,
+        "y": 820,
+        "wires": [
+            [
+                "ae49b08de547dd57"
+            ]
+        ]
+    },
+    {
+        "id": "ae49b08de547dd57",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "DEBUG Python-Recording Rückgabecode",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2720,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "e769f5f3ed1a07c5",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Jeden Freitag 22:00 Uhr",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 22 * * 5",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "epg-archive",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 1080,
+        "wires": [
+            [
+                "59b34c904fbe86c5"
+            ]
+        ]
+    },
+    {
+        "id": "59b34c904fbe86c5",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Archivierungs-Skript erstellen",
+        "func": "const base = flow.get(\"magentatvStorageBase\") || \"/mnt/rec\";\nconst serviceDir = flow.get(\"magentatvStorageServiceDir\") || (base + \"/services\");\nconst trackerDir = base + \"/Tracker\";\nconst sourceFile = serviceDir + \"/magentatv_scan_program_info.jsonl\";\n\nconst script = `\nmkdir -p \"${trackerDir}\"\nTIMESTAMP=$(date +\"%Y%m%d_%H%M\")\nTARGET=\"${trackerDir}/epg_archive_$TIMESTAMP.zip\"\nSOURCE=\"${sourceFile}\"\n\nif [ -f \"$SOURCE\" ]; then\n    cp \"$SOURCE\" \"$SOURCE.tmp\"\n    # SICHERHEITS-CHECK: Original nur leeren, wenn zip erfolgreich war\n    if zip -j \"$TARGET\" \"$SOURCE.tmp\"; then\n        rm \"$SOURCE.tmp\"\n        > \"$SOURCE\"\n        echo \"Archiv erstellt und Original geleert: $TARGET\"\n    else\n        rm \"$SOURCE.tmp\"\n        echo \"FEHLER: zip konnte nicht ausgefuehrt werden (evtl. fehlt das Paket).\"\n        exit 1\n    fi\nelse\n    echo \"Keine Datei zum Archivieren gefunden: $SOURCE\"\nfi\n`;\n\n// Sicher in bash -c verpacken, um Multiline-Fehler im Exec-Node zu vermeiden\nmsg.payload = \"bash -c '\" + script.replace(/'/g, \"'\\\\''\") + \"'\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 1080,
+        "wires": [
+            [
+                "ea0ea5ece3cd94b6"
+            ]
+        ]
+    },
+    {
+        "id": "ea0ea5ece3cd94b6",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "30",
+        "winHide": true,
+        "oldrc": false,
+        "name": "Zip & Rollover ausführen",
+        "x": 710,
+        "y": 1080,
+        "wires": [
+            [
+                "596c49de11f3b0c9"
+            ],
+            [
+                "596c49de11f3b0c9"
+            ],
+            [
+                "596c49de11f3b0c9"
+            ]
+        ]
+    },
+    {
+        "id": "596c49de11f3b0c9",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Archivierungs-Log",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "79fd70694ae51217",
+        "type": "inject",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Täglich 03:00 Uhr",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 03 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "cleanup-recordings",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1140,
+        "wires": [
+            [
+                "1f87417004b9df69"
+            ]
+        ]
+    },
+    {
+        "id": "1f87417004b9df69",
+        "type": "function",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Lösch-Skript generieren",
+        "func": "const root = flow.get(\"magentatvRecordingRoot\");\nconst weeks = Number(flow.get(\"magentatvRetentionWeeks\") || 4);\nconst days = weeks * 7;\n\nif(!root || root.length < 5) {\n    node.warn(\"Sicherheitsabbruch: Kein gueltiger Aufnahmepfad gefunden.\");\n    return null;\n}\n\nconst script = `\nLOG_DIR=\"/home/pi/project/logs\"\nLOG_FILE=\"$LOG_DIR/magentatv_cleanup.log\"\nmkdir -p \"$LOG_DIR\"\n\nROOT_DIR=\"${root}\"\nDAYS=${days}\n\necho \"========================================\" >> \"$LOG_FILE\"\necho \"[$(date +'%Y-%m-%d %H:%M:%S')] Starte Bereinigung...\" >> \"$LOG_FILE\"\necho \"[$(date +'%Y-%m-%d %H:%M:%S')] Zielverzeichnis: $ROOT_DIR\" >> \"$LOG_FILE\"\necho \"[$(date +'%Y-%m-%d %H:%M:%S')] Aufbewahrungsdauer: $DAYS Tage\" >> \"$LOG_FILE\"\n\nif [ -d \"$ROOT_DIR\" ]; then\n    # Lösche Dateien und schreibe die gelöschten Pfade direkt ins Log\n    echo \"[$(date +'%Y-%m-%d %H:%M:%S')] Gelöschte Dateien:\" >> \"$LOG_FILE\"\n    \n    # find -print -delete gibt den Pfad aus, bevor gelöscht wird\n    find \"$ROOT_DIR\" -type f -mtime +$DAYS -print -delete >> \"$LOG_FILE\"\n    \n    # Lösche danach übrig gebliebene, leere Ordner\n    find \"$ROOT_DIR\" -type d -empty -delete\n    \n    echo \"[$(date +'%Y-%m-%d %H:%M:%S')] Bereinigung erfolgreich beendet.\" >> \"$LOG_FILE\"\n    echo \"Cleanup ausgeführt. Details in $LOG_FILE\"\nelse\n    echo \"[$(date +'%Y-%m-%d %H:%M:%S')] FEHLER: Verzeichnis $ROOT_DIR nicht gefunden!\" >> \"$LOG_FILE\"\n    echo \"Fehler: Verzeichnis nicht gefunden.\"\nfi\n`;\n\nmsg.payload = \"bash -c '\" + script.replace(/'/g, \"'\\\\''\") + \"'\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 1140,
+        "wires": [
+            [
+                "abce76bc1a362737"
+            ]
+        ]
+    },
+    {
+        "id": "abce76bc1a362737",
+        "type": "exec",
+        "z": "f26b92fccfb2c7cb",
+        "command": "",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "300",
+        "winHide": true,
+        "oldrc": false,
+        "name": "Bereinigung ausführen",
+        "x": 700,
+        "y": 1140,
+        "wires": [
+            [
+                "3a38cde35a288516"
+            ],
+            [
+                "3a38cde35a288516"
+            ],
+            [
+                "3a38cde35a288516"
+            ]
+        ]
+    },
+    {
+        "id": "3a38cde35a288516",
+        "type": "debug",
+        "z": "f26b92fccfb2c7cb",
+        "name": "Cleanup-Log",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "747149ef8d0101b5",
+        "type": "ui-group",
+        "name": "SSU Surveillance Monitor",
+        "page": "9c9418366827a971",
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "9c9418366827a971",
+        "type": "ui-page",
+        "name": "Magenta 2 SSU Surveillance",
+        "ui": "b1a2c3d4e5f60701",
+        "path": "/MagentaRemote",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "ef8a85d4239c0bb8",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "b1a2c3d4e5f60701",
+        "type": "ui-base",
+        "name": "MagentaTV Control",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 5,
+        "showDisconnectNotification": true,
+        "allowInstall": false
+    },
+    {
+        "id": "ef8a85d4239c0bb8",
+        "type": "ui-theme",
+        "name": "test",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094ce",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "df84a5a7a1f9e466",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.34.0"
+        }
+    }
+]
