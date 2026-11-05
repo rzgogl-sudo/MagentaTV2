@@ -993,6 +993,84 @@
         "wires": []
     },
     {
+        "id": "http_wm_in",
+        "type": "http in",
+        "z": "tab_magenta_analyzer_complete",
+        "name": "API Watermark Single",
+        "url": "/api/watermark",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 480,
+        "y": 1740,
+        "wires": [
+            [
+                "http_wm_res",
+                "func_wm_prep"
+            ]
+        ]
+    },
+    {
+        "id": "http_wm_res",
+        "type": "http response",
+        "z": "tab_magenta_analyzer_complete",
+        "name": "200 OK (Sofort)",
+        "statusCode": "200",
+        "headers": {},
+        "x": 700,
+        "y": 1700,
+        "wires": []
+    },
+    {
+        "id": "func_wm_prep",
+        "type": "function",
+        "z": "tab_magenta_analyzer_complete",
+        "name": "Befehl bauen",
+        "func": "let file = msg.req.query.file;\n// Übergibt den Dateinamen und das Ziel an das Python Skript\nmsg.payload = '--single \"' + file + '\" --outdir \"/home/pi/Downloads\"';\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 1760,
+        "wires": [
+            [
+                "exec_single_wm"
+            ]
+        ]
+    },
+    {
+        "id": "exec_single_wm",
+        "type": "exec",
+        "z": "tab_magenta_analyzer_complete",
+        "command": "python3 /home/pi/project/zarpy/pic/wmfiles.py",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Run Single WM",
+        "x": 920,
+        "y": 1760,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "b952e27611037cf0",
+        "type": "comment",
+        "z": "tab_magenta_analyzer_complete",
+        "name": "Singel File Watermarking from Hover Menu",
+        "info": "",
+        "x": 540,
+        "y": 1640,
+        "wires": []
+    },
+    {
         "id": "ui_group_report_final",
         "type": "ui-group",
         "name": "Report",
@@ -1066,7 +1144,7 @@
         }
     },
     {
-        "id": "5ac3d21f26c836d4",
+        "id": "032fee7dd67e6090",
         "type": "global-config",
         "env": [],
         "modules": {
